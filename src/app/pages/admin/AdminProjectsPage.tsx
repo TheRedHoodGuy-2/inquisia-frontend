@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import { Link } from 'react-router'
-import { MagnifyingGlass, X, WarningCircle } from 'phosphor-react'
+import { MagnifyingGlass, X, WarningCircle, Star } from 'phosphor-react'
 import { projectsApi, adminApi } from '../../../lib/api'
 import type { Project } from '../../../lib/types'
 import { getCategoryStyle, relativeTime } from '../../../lib/utils'
@@ -52,6 +52,18 @@ export function AdminProjectsPage() {
       toast.success('Project unpublished.')
     } else {
       toast.error(res.error ?? 'Failed to unpublish project.')
+    }
+    setActing(null)
+  }
+
+  const handleToggleSpecial = async (project: Project) => {
+    setActing(project.id)
+    const res = await adminApi.setSpecial(project.id, !project.is_special)
+    if (res.success) {
+      setProjects((prev) => prev.map((p) => p.id === project.id ? { ...p, is_special: !p.is_special, special_assigned_at: !p.is_special ? new Date().toISOString() : null } : p))
+      toast.success(project.is_special ? 'Special status removed.' : 'Project marked as special!')
+    } else {
+      toast.error((res as any).error ?? 'Failed to update special status.')
     }
     setActing(null)
   }
@@ -132,6 +144,15 @@ export function AdminProjectsPage() {
                         className="px-2.5 py-1 rounded-full text-[11px] bg-transparent border border-[#0066FF] text-[#0066FF] hover:bg-[#0066FF10] transition-colors"
                         style={{ fontFamily: 'var(--font-body)' }}>Unpublish</button>
                     )}
+                    <button
+                      onClick={() => handleToggleSpecial(p)}
+                      disabled={acting === p.id}
+                      className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] transition-colors ${p.is_special ? 'bg-[#D4AF37] text-white hover:bg-[#B8960C]' : 'border border-[#D4AF37] text-[#B8960C] hover:bg-[#D4AF3718]'}`}
+                      style={{ fontFamily: 'var(--font-body)' }}
+                    >
+                      <Star size={11} weight={p.is_special ? 'fill' : 'regular'} />
+                      {p.is_special ? 'Special' : 'Mark Special'}
+                    </button>
                   </div>
                 </div>
               </div>

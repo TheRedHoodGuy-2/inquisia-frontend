@@ -10,7 +10,7 @@ import { SessionProvider } from '../../../context/SessionContext'
 import { ThemeProvider } from '../../../context/ThemeContext'
 
 // Pages that should not show the footer
-const NO_FOOTER_PATHS = ['/dashboard', '/upload', '/admin', '/elara', '/settings', '/profile', '/bookmarks']
+const NO_FOOTER_PATHS = ['/dashboard', '/upload', '/admin', '/elara', '/settings', '/profile', '/bookmarks', '/login', '/register', '/forgot-password', '/reset-password']
 // Pages that should not show the AI widget
 const NO_WIDGET_PATHS = ['/elara']
 // Pages that manage their own height layout (no bottom-dock padding needed)

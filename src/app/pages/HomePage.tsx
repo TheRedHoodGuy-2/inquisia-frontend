@@ -6,6 +6,7 @@ import { useSession } from '../../context/SessionContext'
 import { useTheme } from '../../context/ThemeContext'
 import { projectsApi, publicApi } from '../../lib/api'
 import type { Project, Department, AICategory } from '../../lib/types'
+import { AnnouncementBanner } from '../components/AnnouncementBanner'
 import { getCategoryStyle, getAvatarColor, getInitials, formatNumber, relativeTime } from '../../lib/utils'
 import { SkeletonProjectCard } from '../components/SkeletonPrimitives'
 import SplitText from '../components/ui/SplitText'
@@ -143,15 +144,31 @@ function LeanProjectCard({ project, index }: { project: Project; index: number }
       onHoverStart={() => setHovered(true)}
       onHoverEnd={() => setHovered(false)}
       onClick={() => navigate(`/projects/${project.id}`)}
-      className="rounded-2xl border border-[#E5E7EB] dark:border-[#1C1C1C] bg-white dark:bg-[#101010] p-6 cursor-pointer transition-all duration-150 flex flex-col"
+      className={`rounded-2xl border bg-white dark:bg-[#101010] cursor-pointer transition-all duration-200 flex flex-col relative overflow-hidden ${project.is_special ? 'border-[#D4AF37]/60 dark:border-[#D4AF37]/40' : 'border-[#E5E7EB] dark:border-[#1C1C1C]'}`}
       style={{
-        boxShadow: hovered ? 'var(--shadow-card-hover)' : 'var(--shadow-card)',
-        transform: hovered ? 'translateY(-3px)' : 'translateY(0)',
+        boxShadow: project.is_special
+          ? hovered
+            ? '0 8px 32px rgba(212,175,55,0.2), 0 0 0 1px rgba(212,175,55,0.4)'
+            : '0 2px 12px rgba(212,175,55,0.12), 0 0 0 1px rgba(212,175,55,0.25)'
+          : hovered ? 'var(--shadow-card-hover)' : 'var(--shadow-card)',
+        transform: hovered ? 'translateY(-2px)' : 'translateY(0)',
       }}
     >
+      {project.is_special && (
+        <div
+          className="h-[3px] w-full flex-shrink-0"
+          style={{ background: 'linear-gradient(90deg, #B8860B, #F5D060, #D4AF37, #F5D060, #B8860B)', backgroundSize: '200% 100%', animation: 'goldShimmer 3s ease-in-out infinite' }}
+        />
+      )}
+      <div className="p-6 flex flex-col flex-1">
       {/* Top row: categories + arrow */}
       <div className="flex items-start justify-between mb-3">
         <div className="flex flex-wrap gap-1.5">
+          {project.is_special && (
+            <span className="px-2.5 py-1 rounded-full text-[11px] font-semibold flex items-center gap-1" style={{ background: 'linear-gradient(135deg, #7B5E00, #B8860B)', color: '#FFF8DC', fontFamily: 'var(--font-body)' }}>
+              ★ Featured
+            </span>
+          )}
           <span
             className="px-2.5 py-1 rounded-full text-[11px] font-medium"
             style={{ backgroundColor: catStyle.bg, color: catStyle.text, fontFamily: 'var(--font-body)' }}
@@ -206,6 +223,7 @@ function LeanProjectCard({ project, index }: { project: Project; index: number }
             {project.year}
           </span>
         </div>
+      </div>
       </div>
     </motion.div>
   )
@@ -265,7 +283,7 @@ function HeroSection() {
             className="mb-0 flex flex-col items-center"
             style={{
               fontFamily: 'var(--font-display)',
-              fontSize: 'clamp(42px, 7vw, 92px)',
+              fontSize: 'clamp(28px, 7vw, 92px)',
               fontWeight: 800,
               letterSpacing: '-0.04em',
               lineHeight: 1,
@@ -273,11 +291,11 @@ function HeroSection() {
           >
             <span className="text-[#0A0A0A] dark:text-[#F5F5F5]">Inquire</span>
 
-            <div className="relative h-[1.3em] flex items-center justify-center w-full">
+            <div className="relative flex items-center justify-center w-full overflow-hidden" style={{ height: '1.35em' }}>
               <SplitText
                 key={index}
                 text={PHRASES[index]}
-                className="absolute text-[#0066FF] py-2"
+                className="absolute text-[#0066FF] py-2 whitespace-nowrap"
                 delay={50}
                 duration={1.25}
                 ease="elastic.out(1, 0.3)"
@@ -446,6 +464,9 @@ export function HomePage() {
   return (
     <div>
       <HeroSection />
+      <div className="max-w-[1200px] mx-auto px-5 md:px-12 pt-6">
+        <AnnouncementBanner placement="home" />
+      </div>
       <FeaturedProjects />
     </div>
   )

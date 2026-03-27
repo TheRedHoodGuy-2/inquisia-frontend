@@ -5,8 +5,8 @@ import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import type { Components } from 'react-markdown'
 import { useSession } from '../../context/SessionContext'
-import { aiApi, conversationsApi, elaraSettingsApi } from '../../lib/api'
-import type { ChatMessage, ElaraConversation, ElaraSettings } from '../../lib/types'
+import { aiApi, conversationsApi, elaraSettingsApi, elaraUsageApi } from '../../lib/api'
+import type { ChatMessage, ElaraConversation, ElaraSettings, ElaraUsage } from '../../lib/types'
 import { ElaraLogo } from '../components/ui/ElaraLogo'
 import { relativeTime } from '../../lib/utils'
 
@@ -286,6 +286,11 @@ export function ElaraPage() {
   const [elaraSettings, setElaraSettings] = useState<ElaraSettings | null>(null)
   const [modelMap, setModelMap] = useState<Record<string, string>>({})
   const [loadingMessages, setLoadingMessages] = useState(false)
+  const [usage, setUsage] = useState<ElaraUsage | null>(null)
+
+  const refreshUsage = useCallback(() => {
+    elaraUsageApi.get().then((res) => { if (res.success) setUsage(res.data) }).catch(() => {})
+  }, [])
 
   useEffect(() => {
     if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight
@@ -316,7 +321,8 @@ export function ElaraPage() {
     elaraSettingsApi.get().then((res) => {
       if (res.success) setElaraSettings(res.data)
     }).catch(() => {})
-  }, [user])
+    refreshUsage()
+  }, [user, refreshUsage])
 
   const selectConversation = useCallback(async (id: string) => {
     setActiveConvId(id)
@@ -410,6 +416,7 @@ export function ElaraPage() {
     }
     setLatestAIId(aiId)
     setSending(false)
+    refreshUsage()
 
     if (convId && res.success && (res.data as { conversation_title?: string }).conversation_title) {
       setConversations((prev) =>
@@ -478,6 +485,35 @@ export function ElaraPage() {
                 </button>
               </div>
             </div>
+
+            {/* Conversations label */}
+            <div className="px-4 pb-1">
+              <span className="text-[11px] font-semibold uppercase tracking-[0.06em] text-[#9AA0AD]" style={{ fontFamily: 'var(--font-body)' }}>
+                Conversations
+              </span>
+            </div>
+
+            {/* Usage pill */}
+            {usage !== null && elaraSettings?.show_usage_stats !== false && (
+              <div className="px-4 pb-2">
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-[10px] text-[#9AA0AD]" style={{ fontFamily: 'var(--font-body)' }}>
+                    {usage.elara}/30 messages this hour
+                  </span>
+                  {usage.reset_at && (
+                    <span className="text-[10px] text-[#9AA0AD]" style={{ fontFamily: 'var(--font-body)' }}>
+                      resets {new Date(usage.reset_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    </span>
+                  )}
+                </div>
+                <div className="h-1 rounded-full bg-[#E4E7EC] dark:bg-[#222229] overflow-hidden">
+                  <div
+                    className="h-full rounded-full bg-[#0066FF] transition-all duration-500"
+                    style={{ width: `${Math.min((usage.elara / 30) * 100, 100)}%` }}
+                  />
+                </div>
+              </div>
+            )}
 
             {/* Conversations label */}
             <div className="px-4 pb-1">

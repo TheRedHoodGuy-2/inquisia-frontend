@@ -12,6 +12,7 @@ import { notificationsApi } from '../../lib/api'
 import { relativeTime } from '../../lib/utils'
 import { EmptyState } from '../components/EmptyState'
 import type { Notification } from '../../lib/types'
+import { AnnouncementBanner } from '../components/AnnouncementBanner'
 
 // ─── Type → label map ─────────────────────────────────────────────────────────
 
@@ -147,19 +148,17 @@ function NotifCard({ notif, onDelete, onMarkRead }: NotifCardProps) {
           </p>
         </div>
 
-        {/* Trash button (hover) */}
-        {hovered && (
-          <button
-            onClick={(e) => {
-              e.stopPropagation()
-              onDelete(notif.id)
-            }}
-            className="flex-shrink-0 p-1.5 rounded-lg text-[#9AA0AD] hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 transition-colors"
-            aria-label="Delete notification"
-          >
-            <Trash size={15} />
-          </button>
-        )}
+        {/* Trash button — always visible on touch, hover-only on pointer devices */}
+        <button
+          onClick={(e) => {
+            e.stopPropagation()
+            onDelete(notif.id)
+          }}
+          className={`flex-shrink-0 p-1.5 rounded-lg text-[#9AA0AD] hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 transition-all duration-150 ${hovered ? 'opacity-100' : 'opacity-100 sm:opacity-0 sm:group-hover:opacity-100'}`}
+          aria-label="Delete notification"
+        >
+          <Trash size={15} />
+        </button>
       </div>
     </div>
   )
@@ -232,8 +231,9 @@ export function NotificationsPage() {
 
   return (
     <div className="max-w-[1200px] mx-auto px-4 py-8 md:px-12 md:py-12">
+      <AnnouncementBanner placement="notifications" className="mb-5" />
       {/* Header */}
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex flex-wrap items-start justify-between gap-3 mb-6">
         <div className="flex items-center gap-3">
           <h1
             className="text-[22px] font-semibold text-[#0A0A0F] dark:text-[#F0F0F5]"
@@ -252,11 +252,11 @@ export function NotificationsPage() {
         </div>
 
         {/* Actions */}
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           {unreadCount > 0 && (
             <button
               onClick={handleMarkAllRead}
-              className="px-4 py-2.5 rounded-xl border border-[#E4E7EC] dark:border-[#222229] text-[#5C6070] dark:text-[#8B8FA8] hover:bg-[#F2F4F7] dark:hover:bg-[#18181D] text-[14px] font-medium transition-colors"
+              className="px-3 py-2 rounded-xl border border-[#E4E7EC] dark:border-[#222229] text-[#5C6070] dark:text-[#8B8FA8] hover:bg-[#F2F4F7] dark:hover:bg-[#18181D] text-[13px] font-medium transition-colors"
               style={{ fontFamily: 'var(--font-body)' }}
             >
               Mark all read
@@ -274,7 +274,7 @@ export function NotificationsPage() {
                     className="px-3 py-2 rounded-xl bg-red-500 text-white hover:bg-red-600 text-[13px] font-medium transition-colors"
                     style={{ fontFamily: 'var(--font-body)' }}
                   >
-                    Yes, clear
+                    Yes
                   </button>
                   <button
                     onClick={() => setShowClearConfirm(false)}
@@ -287,7 +287,7 @@ export function NotificationsPage() {
               ) : (
                 <button
                   onClick={() => setShowClearConfirm(true)}
-                  className="px-4 py-2.5 rounded-xl border border-[#E4E7EC] dark:border-[#222229] text-[#5C6070] dark:text-[#8B8FA8] hover:bg-[#F2F4F7] dark:hover:bg-[#18181D] text-[14px] font-medium transition-colors"
+                  className="px-3 py-2 rounded-xl border border-[#E4E7EC] dark:border-[#222229] text-[#5C6070] dark:text-[#8B8FA8] hover:bg-[#F2F4F7] dark:hover:bg-[#18181D] text-[13px] font-medium transition-colors"
                   style={{ fontFamily: 'var(--font-body)' }}
                 >
                   Clear all

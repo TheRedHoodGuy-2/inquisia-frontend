@@ -83,6 +83,8 @@ export interface Project {
   authors: ProjectAuthor[]
   ai_summary: string | null
   ai_analysis: AIAnalysis | null
+  is_special: boolean
+  special_assigned_at: string | null
   created_at: string
   updated_at: string
   approved_at: string | null
@@ -131,6 +133,30 @@ export interface Notification {
   is_read: boolean
   link: string | null
   created_at: string
+}
+
+// ─── Announcement ─────────────────────────────────────────────────────────────
+
+export type AnnouncementType = 'info' | 'warning' | 'success' | 'promo'
+export type AnnouncementPlacement =
+  | 'home'
+  | 'upload_1'
+  | 'upload_2'
+  | 'upload_3'
+  | 'upload_4'
+  | 'upload_5'
+  | 'notifications'
+
+export interface Announcement {
+  id: string
+  title: string
+  body: string
+  type: AnnouncementType
+  placements: AnnouncementPlacement[]
+  is_active?: boolean
+  created_by?: string
+  created_at?: string
+  expires_at: string | null
 }
 
 // ─── Department / Category ────────────────────────────────────────────────────
@@ -217,17 +243,11 @@ export interface ElaraSettings {
   show_usage_stats: boolean
 }
 
-export interface ElaraUsageBreakdown {
-  elara_chat: number
-  page_assistant: number
-  project_chat: number
-}
-
 export interface ElaraUsage {
-  messages_used: number
-  messages_limit: number
-  reset_at: string
-  breakdown: ElaraUsageBreakdown | null
+  elara: number
+  assistant: number
+  project_chat: number
+  reset_at: string | null
 }
 
 export interface ElaraConversation {

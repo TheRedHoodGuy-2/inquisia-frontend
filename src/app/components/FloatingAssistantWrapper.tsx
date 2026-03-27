@@ -6,8 +6,8 @@ import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import type { Components } from 'react-markdown'
 import { useSession } from '../../context/SessionContext'
-import { aiApi, elaraSettingsApi, projectsApi } from '../../lib/api'
-import type { ChatMessage, ElaraSettings } from '../../lib/types'
+import { aiApi, elaraSettingsApi, elaraUsageApi, projectsApi } from '../../lib/api'
+import type { ChatMessage, ElaraSettings, ElaraUsage } from '../../lib/types'
 import { ElaraLogo } from './ui/ElaraLogo'
 
 const PROJECT_URL_RE = /\/projects\/([a-f0-9-]{36})/
@@ -124,6 +124,11 @@ export function FloatingAssistantWrapper() {
   const inputRef = useRef<HTMLInputElement>(null)
   const [settings, setSettings] = useState<ElaraSettings | null>(null)
   const settingsLoadedRef = useRef(false)
+  const [usage, setUsage] = useState<ElaraUsage | null>(null)
+
+  const refreshUsage = useCallback(() => {
+    if (user) elaraUsageApi.get().then((res) => { if (res.success) setUsage(res.data) }).catch(() => {})
+  }, [user])
 
   // ── Drag state ──────────────────────────────────────────────────────────────
   const [pos, setPos] = useState<{ x: number; y: number } | null>(null)
@@ -219,14 +224,15 @@ export function FloatingAssistantWrapper() {
     }
   }, [open])
 
-  // Load settings on first open
+  // Load settings + usage on first open
   useEffect(() => {
     if (!open || settingsLoadedRef.current || !user) return
     settingsLoadedRef.current = true
     elaraSettingsApi.get().then((res) => {
       if (res.success) setSettings(res.data)
     }).catch(() => {})
-  }, [open, user])
+    refreshUsage()
+  }, [open, user, refreshUsage])
 
   const getContext = useCallback(() => {
     const path = location.pathname
@@ -319,7 +325,8 @@ export function FloatingAssistantWrapper() {
     }
 
     setSending(false)
-  }, [input, sending, messages, getContext, settings])
+    refreshUsage()
+  }, [input, sending, messages, getContext, settings, refreshUsage])
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter') void send()
@@ -396,9 +403,24 @@ export function FloatingAssistantWrapper() {
                   <X size={16} />
                 </button>
               </div>
-              <p className="text-[11px] text-[#9AA0AD] px-4 pb-2 pt-1.5" style={{ fontFamily: 'var(--font-body)' }}>
-                {getContext().projectId ? 'Answering questions about this project' : 'Ask me anything about Inquisia'}
-              </p>
+              <div className="flex items-center justify-between px-4 pb-2 pt-1.5 gap-3">
+                <p className="text-[11px] text-[#9AA0AD]" style={{ fontFamily: 'var(--font-body)' }}>
+                  {getContext().projectId ? 'Answering questions about this project' : 'Ask me anything about Inquisia'}
+                </p>
+                {usage !== null && settings?.show_usage_stats !== false && user && (
+                  <span className="text-[10px] text-[#9CA3AF] flex-shrink-0" style={{ fontFamily: 'var(--font-body)' }}>
+                    {usage.assistant}/30
+                  </span>
+                )}
+              </div>
+              {usage !== null && settings?.show_usage_stats !== false && user && (
+                <div className="mx-4 h-0.5 rounded-full bg-[#E4E7EC] dark:bg-[#222229] overflow-hidden mb-1">
+                  <div
+                    className="h-full rounded-full bg-[#0066FF] transition-all duration-500"
+                    style={{ width: `${Math.min((usage.assistant / 30) * 100, 100)}%` }}
+                  />
+                </div>
+              )}
             </div>
 
             {/* Messages */}

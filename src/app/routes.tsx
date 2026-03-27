@@ -33,6 +33,7 @@ const AdminSupervisorsPage = lazy(() => import('./pages/admin/AdminSupervisorsPa
 const AdminDepartmentsPage = lazy(() => import('./pages/admin/AdminDepartmentsPage').then((m) => ({ default: m.AdminDepartmentsPage })))
 const AdminCategoriesPage = lazy(() => import('./pages/admin/AdminCategoriesPage').then((m) => ({ default: m.AdminCategoriesPage })))
 const AdminFlaggedCommentsPage = lazy(() => import('./pages/admin/AdminFlaggedCommentsPage').then((m) => ({ default: m.AdminFlaggedCommentsPage })))
+const AdminAnnouncementsPage = lazy(() => import('./pages/admin/AdminAnnouncementsPage').then((m) => ({ default: m.AdminAnnouncementsPage })))
 
 // ─── Loading fallback ─────────────────────────────────────────────────────────
 
@@ -84,6 +85,7 @@ export const router = createBrowserRouter([
           { path: 'departments', element: <Lazy><AdminDepartmentsPage /></Lazy> },
           { path: 'ai-categories', element: <Lazy><AdminCategoriesPage /></Lazy> },
           { path: 'flagged-comments', element: <Lazy><AdminFlaggedCommentsPage /></Lazy> },
+          { path: 'announcements', element: <Lazy><AdminAnnouncementsPage /></Lazy> },
         ],
       },
       { path: '*', element: <Lazy><NotFoundPage /></Lazy> },

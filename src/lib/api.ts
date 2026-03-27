@@ -149,6 +149,11 @@ export const authApi = {
       method: 'POST',
       body: JSON.stringify({ email }),
     }),
+  verifyResetOtp: (email: string, otp: string) =>
+    apiFetch<{ reset_token: string }>('/api/auth/verify-reset-otp', {
+      method: 'POST',
+      body: JSON.stringify({ email, otp }),
+    }),
   resetPassword: (token: string, password: string) =>
     apiFetch<null>('/api/auth/reset-password', {
       method: 'POST',
@@ -347,6 +352,32 @@ export const adminApi = {
     }),
   deleteComment: (commentId: string) =>
     apiFetch<null>(`/api/admin/comments/${commentId}/flag`, { method: 'DELETE' }),
+  // Special projects
+  setSpecial: (projectId: string, special: boolean) =>
+    apiFetch<{ id: string; is_special: boolean }>(`/api/admin/projects/${projectId}/special`, {
+      method: 'POST',
+      body: JSON.stringify({ special }),
+    }),
+  // Announcements (admin)
+  announcements: () => apiFetch<import('./types').Announcement[]>('/api/admin/announcements'),
+  createAnnouncement: (payload: Omit<import('./types').Announcement, 'id'>) =>
+    apiFetch<import('./types').Announcement>('/api/admin/announcements', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
+  updateAnnouncement: (id: string, patch: Partial<import('./types').Announcement>) =>
+    apiFetch<import('./types').Announcement>(`/api/admin/announcements/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(patch),
+    }),
+  deleteAnnouncement: (id: string) =>
+    apiFetch<null>(`/api/admin/announcements/${id}`, { method: 'DELETE' }),
+}
+
+// Announcements (public)
+export const announcementsApi = {
+  forPlacement: (placement: string) =>
+    apiFetch<import('./types').Announcement[]>(`/api/announcements?placement=${placement}`),
 }
 
 // AI

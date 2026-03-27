@@ -11,6 +11,7 @@ import type { Project, Department, AICategory } from '../../lib/types'
 import { getCategoryStyle, getInitials, getAvatarColor, formatNumber } from '../../lib/utils'
 import { useTheme } from '../../context/ThemeContext'
 import { SkeletonProjectCard } from '../components/SkeletonPrimitives'
+import { AnnouncementBanner } from '../components/AnnouncementBanner'
 
 // ─── Author avatars stack ─────────────────────────────────────────────────────
 
@@ -56,14 +57,36 @@ function ProjectCard({ project, index }: { project: Project; index: number }) {
       onHoverStart={() => setHovered(true)}
       onHoverEnd={() => setHovered(false)}
       onClick={() => navigate(`/projects/${project.id}`)}
-      className="rounded-2xl border border-[#E5E7EB] dark:border-[#1C1C1C] bg-white dark:bg-[#101010] p-6 cursor-pointer transition-all duration-150 flex flex-col"
+      className={`relative rounded-2xl border bg-white dark:bg-[#101010] cursor-pointer transition-all duration-200 flex flex-col overflow-hidden ${
+        project.is_special
+          ? 'border-[#D4AF37]/60 dark:border-[#D4AF37]/40'
+          : 'border-[#E5E7EB] dark:border-[#1C1C1C]'
+      }`}
       style={{
-        boxShadow: hovered ? 'var(--shadow-card-hover)' : 'var(--shadow-card)',
-        transform: hovered ? 'translateY(-3px)' : 'translateY(0)',
+        boxShadow: project.is_special
+          ? hovered
+            ? '0 8px 32px rgba(212,175,55,0.2), 0 0 0 1px rgba(212,175,55,0.4)'
+            : '0 2px 12px rgba(212,175,55,0.12), 0 0 0 1px rgba(212,175,55,0.25)'
+          : hovered ? 'var(--shadow-card-hover)' : 'var(--shadow-card)',
+        transform: hovered ? 'translateY(-2px)' : 'translateY(0)',
       }}
     >
+      {/* Gold top bar for special projects */}
+      {project.is_special && (
+        <div
+          className="h-[3px] w-full flex-shrink-0"
+          style={{ background: 'linear-gradient(90deg, #B8860B, #F5D060, #D4AF37, #F5D060, #B8860B)', backgroundSize: '200% 100%', animation: 'goldShimmer 3s ease-in-out infinite' }}
+        />
+      )}
+      <div className="p-6 flex flex-col flex-1">
+
       {/* Pills */}
       <div className="flex flex-wrap gap-1.5 mb-3">
+        {project.is_special && (
+          <span className="px-2.5 py-1 rounded-full text-[11px] font-semibold flex items-center gap-1" style={{ background: 'linear-gradient(135deg, #7B5E00, #B8860B)', color: '#FFF8DC', fontFamily: 'var(--font-body)' }}>
+            ★ Featured
+          </span>
+        )}
         <span className="px-2.5 py-1 rounded-full text-[11px] font-medium" style={{ backgroundColor: catStyle.bg, color: catStyle.text, fontFamily: 'var(--font-body)' }}>
           {topCategory}
         </span>
@@ -101,6 +124,7 @@ function ProjectCard({ project, index }: { project: Project; index: number }) {
             <span className="text-[12px]">{project.year}</span>
           </div>
         </div>
+      </div>
       </div>
     </motion.div>
   )
@@ -365,6 +389,9 @@ export function BrowsePage() {
   return (
     <div className="min-h-screen">
       <div className="max-w-[1200px] mx-auto px-5 md:px-12 py-8">
+        {/* Announcements */}
+        <AnnouncementBanner placement="home" className="mb-6" />
+
         {/* Header */}
         <div className="mb-8">
           <h1 className="mb-2 text-[#0A0A0A] dark:text-[#F5F5F5]"

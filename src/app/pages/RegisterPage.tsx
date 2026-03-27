@@ -8,6 +8,7 @@ import type { Department } from '../../lib/types'
 import { toast } from 'sonner'
 import { useEffect } from 'react'
 import { InquisiaLogo } from '../components/ui/InquisiaLogo'
+import GridMotion from '../components/ui/GridMotion'
 import {
   Select,
   SelectContent,
@@ -25,37 +26,85 @@ function detectRole(email: string): DetectedRole {
   return null
 }
 
-function DotGrid() {
+const CATEGORY_COLORS: Record<string, string> = {
+  'Machine Learning': '#6366F1', 'AI': '#8B5CF6', 'Computer Vision': '#0EA5E9',
+  'NLP': '#10B981', 'Cybersecurity': '#EF4444', 'Security': '#F97316',
+  'IoT': '#14B8A6', 'Data Science': '#F59E0B', 'Blockchain': '#3B82F6',
+  'Robotics': '#EC4899', 'Distributed Systems': '#6B7280', 'Networks': '#84CC16',
+  'Software Engineering': '#0066FF', 'Programming Languages': '#A855F7',
+}
+
+function ProjectCard({ title, category, year, downloads, tag }: { title: string; category: string; year: number; downloads: number; tag: string }) {
+  const accent = CATEGORY_COLORS[category] ?? '#0066FF'
   return (
-    <svg className="absolute inset-0 w-full h-full" xmlns="http://www.w3.org/2000/svg" style={{ opacity: 0.12 }}>
-      <defs>
-        <pattern id="auth-dots-reg" x="0" y="0" width="16" height="16" patternUnits="userSpaceOnUse">
-          <circle cx="2" cy="2" r="1" fill="white" />
-        </pattern>
-      </defs>
-      <rect width="100%" height="100%" fill="url(#auth-dots-reg)" />
-    </svg>
+    <div className="w-full h-full flex flex-col select-none overflow-hidden">
+      <div className="h-[3px] w-full flex-shrink-0" style={{ background: `linear-gradient(90deg, ${accent}, ${accent}66)` }} />
+      <div className="flex flex-col justify-between flex-1 p-3">
+        <div>
+          <div className="flex flex-wrap gap-1 mb-2">
+            <span className="px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wide" style={{ background: `${accent}25`, color: accent, border: `1px solid ${accent}40` }}>{category}</span>
+          </div>
+          <p className="text-white text-[11px] font-semibold leading-snug line-clamp-3" style={{ fontFamily: 'var(--font-display)', textShadow: '0 1px 3px rgba(0,0,0,0.5)' }}>{title}</p>
+        </div>
+        <div className="flex items-center justify-between mt-2 pt-1.5 border-t border-white/10">
+          <span className="text-white/50 text-[9px] font-medium">{tag}</span>
+          <div className="flex items-center gap-1.5">
+            <span className="text-white/35 text-[9px]">↓{downloads}</span>
+            <span className="text-white/25 text-[9px]">·</span>
+            <span className="text-white/35 text-[9px]">{year}</span>
+          </div>
+        </div>
+      </div>
+    </div>
   )
 }
 
+const GRID_ITEMS = [
+  <ProjectCard key="p1" title="AI-Powered Crop Disease Detection Using CNNs" category="Machine Learning" year={2025} downloads={312} tag="Agriculture" />,
+  <ProjectCard key="p2" title="Blockchain-Based Student Result Verification" category="Cybersecurity" year={2024} downloads={198} tag="Blockchain" />,
+  <ProjectCard key="p3" title="Real-Time Sign Language Translation via MediaPipe" category="Computer Vision" year={2026} downloads={445} tag="Accessibility" />,
+  <ProjectCard key="p4" title="Automated Malware Detection in Android Apps" category="Security" year={2025} downloads={267} tag="Mobile" />,
+  <ProjectCard key="p5" title="Smart Campus Energy Management with IoT" category="IoT" year={2024} downloads={183} tag="Green Tech" />,
+  <ProjectCard key="p6" title="NLP for Yoruba-English Neural Translation" category="NLP" year={2026} downloads={521} tag="Language" />,
+  <ProjectCard key="p7" title="Predictive Analytics for Student Performance" category="Data Science" year={2025} downloads={388} tag="Education" />,
+  <ProjectCard key="p8" title="Distributed File Storage Using IPFS Protocol" category="Distributed Systems" year={2024} downloads={142} tag="Storage" />,
+  <ProjectCard key="p9" title="Mental Health Chatbot with Sentiment Analysis" category="AI" year={2026} downloads={609} tag="Health Tech" />,
+  <ProjectCard key="p10" title="Autonomous Drone Navigation in GPS-Denied Zones" category="Robotics" year={2025} downloads={234} tag="Embedded" />,
+  <ProjectCard key="p11" title="Face Recognition Attendance via Deep Learning" category="Computer Vision" year={2024} downloads={477} tag="Biometrics" />,
+  <ProjectCard key="p12" title="Decentralized Voting with Smart Contracts" category="Blockchain" year={2026} downloads={356} tag="E-Governance" />,
+  <ProjectCard key="p13" title="Network Anomaly Detection Using Autoencoders" category="Cybersecurity" year={2025} downloads={291} tag="Networks" />,
+  <ProjectCard key="p14" title="Recommendation Engine for Nigerian E-Commerce" category="Machine Learning" year={2024} downloads={418} tag="E-Commerce" />,
+  <ProjectCard key="p15" title="Speech-to-Text for Low-Resource Nigerian Languages" category="NLP" year={2026} downloads={537} tag="Igbo · Hausa" />,
+  <ProjectCard key="p16" title="Smart Irrigation via Soil Moisture Prediction" category="IoT" year={2025} downloads={165} tag="Agritech" />,
+  <ProjectCard key="p17" title="Object Detection for Visually Impaired Users" category="Computer Vision" year={2024} downloads={392} tag="Assistive Tech" />,
+  <ProjectCard key="p18" title="Federated Learning for Medical Diagnosis Privacy" category="AI" year={2026} downloads={488} tag="Healthcare" />,
+  <ProjectCard key="p19" title="Campus Wi-Fi Optimization with Genetic Algorithms" category="Networks" year={2025} downloads={129} tag="Optimization" />,
+  <ProjectCard key="p20" title="Deepfake Detection Using Frequency Domain Analysis" category="Cybersecurity" year={2024} downloads={573} tag="Media" />,
+  <ProjectCard key="p21" title="Cloud-Based Electronic Health Records System" category="Software Engineering" year={2026} downloads={341} tag="Healthcare" />,
+  <ProjectCard key="p22" title="Traffic Flow Prediction Using LSTM Networks" category="Data Science" year={2025} downloads={256} tag="Smart City" />,
+  <ProjectCard key="p23" title="Compiler for a Nigerian Pidgin Language" category="Programming Languages" year={2024} downloads={712} tag="🇳🇬 Unique" />,
+  <ProjectCard key="p24" title="Quantum-Resistant Cryptography Study" category="Cybersecurity" year={2026} downloads={198} tag="Quantum" />,
+  <ProjectCard key="p25" title="Stroke Prediction via Ensemble ML Models" category="Machine Learning" year={2025} downloads={429} tag="Healthcare" />,
+  <ProjectCard key="p26" title="Microservices Architecture for EdTech Platforms" category="Software Engineering" year={2024} downloads={317} tag="Education" />,
+  <ProjectCard key="p27" title="Emotion Recognition From EEG via CNN-LSTM" category="AI" year={2026} downloads={483} tag="Neuroscience" />,
+  <ProjectCard key="p28" title="Automated Code Review Using LLMs" category="AI" year={2025} downloads={596} tag="DevTools" />,
+]
+
 function RightPanel() {
   return (
-    <div className="hidden lg:flex relative flex-1 bg-[#0066FF] flex-col items-center justify-center p-12 overflow-hidden">
-      <DotGrid />
-      <div className="relative z-10 text-center max-w-sm">
-        <h2 className="text-white text-[36px] leading-tight mb-4" style={{ fontFamily: 'var(--font-display)', fontWeight: 800, letterSpacing: '-0.02em' }}>
-          Your research deserves to be found.
+    <div className="hidden lg:flex relative flex-1 bg-[#020B18] overflow-hidden">
+      <div className="absolute inset-0">
+        <GridMotion items={GRID_ITEMS} gradientColor="rgba(0,10,30,0.8)" />
+      </div>
+      <div className="absolute inset-0 bg-gradient-to-r from-[#020B18]/60 via-transparent to-[#020B18]/60 pointer-events-none" />
+      <div className="absolute inset-0 bg-gradient-to-b from-[#020B18]/40 via-transparent to-[#020B18]/40 pointer-events-none" />
+      <div className="relative z-10 flex flex-col items-center justify-center w-full text-center px-12 pointer-events-none">
+        <h2 className="text-white text-[38px] leading-tight mb-3 drop-shadow-lg" style={{ fontFamily: 'var(--font-display)', fontWeight: 800, letterSpacing: '-0.03em' }}>
+          Your research deserves<br />to be found.
         </h2>
-        <p className="text-white/70 text-[15px]" style={{ fontFamily: 'var(--font-body)', lineHeight: 1.65 }}>
-          Join thousands of Babcock students and faculty sharing knowledge that inspires the next generation of researchers.
+        <p className="text-white/60 text-[15px]" style={{ fontFamily: 'var(--font-body)' }}>
+          Join thousands of Babcock students and faculty<br />sharing knowledge that lasts.
         </p>
-        <div className="mt-10 flex flex-col gap-3 items-center">
-          {['1,247+ Projects', '3,891 Students', '68 Supervisors', '48k+ Downloads'].map((stat) => (
-            <div key={stat} className="px-4 py-2 rounded-full bg-white/15 text-white text-[13px]" style={{ fontFamily: 'var(--font-body)', fontWeight: 500 }}>
-              {stat}
-            </div>
-          ))}
-        </div>
       </div>
     </div>
   )

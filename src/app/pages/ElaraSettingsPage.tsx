@@ -9,29 +9,36 @@ import type { ElaraSettings, ElaraUsage } from '../../lib/types'
 
 const MODELS = [
   {
+    id: 'gemma-3-27b-it',
+    label: 'Academic Standard',
+    speed: 7,
+    depth: 7,
+    available: true,
+  },
+  {
     id: 'gemini-2.0-flash',
     label: 'Quick & Conversational',
     isDefault: true,
     speed: 9,
     depth: 5,
-  },
-  {
-    id: 'gemma-3-27b-it',
-    label: 'Academic Standard',
-    speed: 7,
-    depth: 7,
+    available: false,
+    unavailableReason: 'Google services experiencing disruptions',
   },
   {
     id: 'gemini-2.0-flash-lite',
     label: 'Lightweight & Fast',
     speed: 10,
     depth: 4,
+    available: false,
+    unavailableReason: 'Google services experiencing disruptions',
   },
   {
     id: 'gemini-2.5-pro',
     label: 'Deep Research',
     speed: 4,
     depth: 10,
+    available: false,
+    unavailableReason: 'Google services experiencing disruptions',
   },
 ] as const
 
@@ -145,7 +152,16 @@ export function ElaraSettingsPage() {
       setLoading(true)
       try {
         const [sRes, uRes] = await Promise.all([elaraSettingsApi.get(), elaraUsageApi.get()])
-        if (sRes.success) setSettings(sRes.data)
+        if (sRes.success) {
+          const data = sRes.data
+          // If saved model is unavailable, silently switch to gemma-3-27b-it
+          const savedModel = MODELS.find((m) => m.id === data.model)
+          if (!savedModel || !savedModel.available) {
+            data.model = 'gemma-3-27b-it'
+            void elaraSettingsApi.update({ model: 'gemma-3-27b-it' })
+          }
+          setSettings(data)
+        }
         if (uRes.success) setUsage(uRes.data)
       } catch {
         toast.error('Failed to load Elara settings.')
@@ -264,14 +280,18 @@ export function ElaraSettingsPage() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
           {MODELS.map((m) => {
             const isSelected = settings.model === m.id
+            const unavailable = !m.available
             return (
               <button
                 key={m.id}
-                onClick={() => handleModelChange(m.id)}
-                className={`rounded-xl border-2 cursor-pointer transition-all p-4 text-left ${
-                  isSelected
-                    ? 'border-[#0066FF] bg-[#0066FF08]'
-                    : 'border-[#E4E7EC] dark:border-[#222229] hover:border-[#0066FF40]'
+                onClick={() => !unavailable && handleModelChange(m.id)}
+                disabled={unavailable}
+                className={`rounded-xl border-2 transition-all p-4 text-left relative overflow-hidden ${
+                  unavailable
+                    ? 'border-[#E4E7EC] dark:border-[#222229] opacity-50 cursor-not-allowed'
+                    : isSelected
+                      ? 'border-[#0066FF] bg-[#0066FF08] cursor-pointer'
+                      : 'border-[#E4E7EC] dark:border-[#222229] hover:border-[#0066FF40] cursor-pointer'
                 }`}
               >
                 <div className="flex items-start justify-between mb-1">
@@ -281,9 +301,14 @@ export function ElaraSettingsPage() {
                   >
                     {m.id}
                   </p>
-                  {isSelected && (
+                  {isSelected && !unavailable && (
                     <span className="w-4 h-4 rounded-full bg-[#0066FF] flex items-center justify-center flex-shrink-0 ml-2 mt-0.5">
                       <Check size={9} weight="bold" className="text-white" />
+                    </span>
+                  )}
+                  {unavailable && (
+                    <span className="ml-2 px-1.5 py-0.5 rounded-md bg-orange-100 dark:bg-orange-900/20 text-orange-600 dark:text-orange-400 text-[10px] font-medium flex-shrink-0" style={{ fontFamily: 'var(--font-body)' }}>
+                      Unavailable
                     </span>
                   )}
                 </div>
@@ -295,6 +320,11 @@ export function ElaraSettingsPage() {
                     </span>
                   )}
                 </p>
+                {'unavailableReason' in m && m.unavailableReason && (
+                  <p className="text-[11px] text-orange-500 dark:text-orange-400 mb-2" style={{ fontFamily: 'var(--font-body)' }}>
+                    ⚠ {m.unavailableReason}
+                  </p>
+                )}
                 <div className="space-y-1.5">
                   <div className="flex items-center gap-2">
                     <span className="text-[11px] text-[#9AA0AD] dark:text-[#4A4D5E] w-10" style={{ fontFamily: 'var(--font-body)' }}>

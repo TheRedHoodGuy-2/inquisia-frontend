@@ -8,6 +8,7 @@ import type { Department, Supervisor } from '../../lib/types'
 import { toast } from 'sonner'
 import confetti from 'canvas-confetti'
 import { DashboardLayout } from '../components/layout/DashboardLayout'
+import { AnnouncementBanner } from '../components/AnnouncementBanner'
 
 // ─── URL validator ────────────────────────────────────────────────────────────
 
@@ -406,6 +407,10 @@ export function UploadPage() {
         </div>
 
         <ProgressIndicator currentStep={step} totalSteps={5} />
+
+        {(['upload_1','upload_2','upload_3','upload_4','upload_5'] as const).map((placement, idx) =>
+          step === idx + 1 ? <AnnouncementBanner key={placement} placement={placement} className="mb-4" /> : null
+        )}
 
         <AnimatePresence mode="wait">
           {/* Step 1 — Files */}

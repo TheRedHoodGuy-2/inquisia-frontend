@@ -1065,6 +1065,29 @@ export function ProjectDetailPage() {
 
   return (
     <div className="max-w-[720px] mx-auto px-5 md:px-0 pt-12 pb-32 sm:pb-24">
+      {/* Featured banner */}
+      {project.is_special && (
+        <div
+          className="flex items-center gap-3 rounded-2xl px-4 py-3 mb-6 border"
+          style={{
+            background: 'linear-gradient(135deg, rgba(184,134,11,0.08), rgba(212,175,55,0.12))',
+            borderColor: 'rgba(212,175,55,0.35)',
+            boxShadow: '0 0 0 1px rgba(212,175,55,0.15)',
+            animation: 'goldShimmer 3s ease-in-out infinite',
+          }}
+        >
+          <span className="text-[18px] leading-none">★</span>
+          <div>
+            <p className="text-[13px] font-semibold" style={{ fontFamily: 'var(--font-display)', color: '#B8860B' }}>
+              Featured Project
+            </p>
+            <p className="text-[12px]" style={{ fontFamily: 'var(--font-body)', color: '#92711A' }}>
+              Hand-picked by the Inquisia team as exemplary work.
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* 1. Category pill */}
       {project.ai_category && catStyle && (
         <div className="mb-6">
