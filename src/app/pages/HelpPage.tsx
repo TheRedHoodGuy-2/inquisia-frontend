@@ -11,8 +11,15 @@ import {
   Star,
   Wrench,
   Headset,
+  Bug,
+  Lightbulb,
+  ChatTeardropText,
+  PaperPlaneTilt,
+  CheckCircle,
 } from 'phosphor-react'
 import { useSession } from '../../context/SessionContext'
+import { feedbackApi } from '../../lib/api'
+import { toast } from 'sonner'
 
 // ─── Data ─────────────────────────────────────────────────────────────────────
 
@@ -312,6 +319,28 @@ export function HelpPage() {
     return () => observer.disconnect()
   }, [search])
 
+  // ─── Feedback form state ────────────────────────────────────────────────────
+  const [fbType, setFbType] = useState<'bug' | 'suggestion' | 'other'>('bug')
+  const [fbSubject, setFbSubject] = useState('')
+  const [fbMessage, setFbMessage] = useState('')
+  const [fbLoading, setFbLoading] = useState(false)
+  const [fbDone, setFbDone] = useState(false)
+
+  async function handleFeedbackSubmit(e: React.FormEvent) {
+    e.preventDefault()
+    if (!fbSubject.trim() || !fbMessage.trim()) { toast.error('Please fill in all fields.'); return }
+    setFbLoading(true)
+    const res = await feedbackApi.submit({ type: fbType, subject: fbSubject.trim(), message: fbMessage.trim() })
+    setFbLoading(false)
+    if (res.success) {
+      setFbDone(true)
+      setFbSubject('')
+      setFbMessage('')
+    } else {
+      toast.error((res as any).error ?? 'Failed to submit. Please try again.')
+    }
+  }
+
   return (
     <div className="min-h-screen bg-[#F8F9FB] dark:bg-[#0C0C0F]">
       <div className="max-w-[1200px] mx-auto px-4 py-8 md:px-12 md:py-12">
@@ -391,6 +420,108 @@ export function HelpPage() {
                 <SectionBlock key={section.id} section={section} />
               ))
             )}
+
+            {/* ── Feedback / Bug Report ── */}
+            <div className="mt-6 rounded-2xl border border-[#E4E7EC] dark:border-[#222229] bg-white dark:bg-[#111115] overflow-hidden">
+              <div className="px-6 pt-6 pb-4 border-b border-[#E4E7EC] dark:border-[#222229] flex items-center gap-3">
+                <div className="w-9 h-9 rounded-xl bg-[#0066FF]/10 flex items-center justify-center flex-shrink-0">
+                  <Bug size={17} weight="bold" className="text-[#0066FF]" />
+                </div>
+                <div>
+                  <h3 className="text-[15px] font-semibold text-[#0A0A0F] dark:text-[#F0F0F5]" style={{ fontFamily: 'var(--font-display)' }}>
+                    Report a bug or send feedback
+                  </h3>
+                  <p className="text-[12px] text-[#9CA3AF]" style={{ fontFamily: 'var(--font-body)' }}>
+                    Found something broken? Have a suggestion? Let us know.
+                  </p>
+                </div>
+              </div>
+
+              {fbDone ? (
+                <div className="px-6 py-10 flex flex-col items-center gap-3 text-center">
+                  <CheckCircle size={36} weight="fill" className="text-[#16A34A]" />
+                  <p className="text-[15px] font-semibold text-[#0A0A0F] dark:text-[#F0F0F5]" style={{ fontFamily: 'var(--font-display)' }}>
+                    Thanks for the feedback!
+                  </p>
+                  <p className="text-[13px] text-[#5C6070] dark:text-[#8B8FA8]" style={{ fontFamily: 'var(--font-body)' }}>
+                    We'll review it and get back to you if needed.
+                  </p>
+                  <button
+                    onClick={() => setFbDone(false)}
+                    className="mt-2 text-[13px] text-[#0066FF] hover:underline"
+                    style={{ fontFamily: 'var(--font-body)' }}
+                  >
+                    Send another
+                  </button>
+                </div>
+              ) : (
+                <form onSubmit={(e) => void handleFeedbackSubmit(e)} className="p-6 space-y-4">
+                  {/* Type selector */}
+                  <div className="flex gap-2">
+                    {([
+                      { value: 'bug', label: 'Bug Report', icon: <Bug size={13} weight="bold" /> },
+                      { value: 'suggestion', label: 'Suggestion', icon: <Lightbulb size={13} weight="bold" /> },
+                      { value: 'other', label: 'Other', icon: <ChatTeardropText size={13} weight="bold" /> },
+                    ] as const).map((t) => (
+                      <button
+                        key={t.value}
+                        type="button"
+                        onClick={() => setFbType(t.value)}
+                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[12px] font-medium border transition-all ${
+                          fbType === t.value
+                            ? 'border-[#0066FF] bg-[#0066FF]/8 text-[#0066FF]'
+                            : 'border-[#E4E7EC] dark:border-[#222229] text-[#5C6070] dark:text-[#8B8FA8] hover:border-[#0066FF]/40'
+                        }`}
+                        style={{ fontFamily: 'var(--font-body)' }}
+                      >
+                        {t.icon}{t.label}
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* Subject */}
+                  <div>
+                    <input
+                      type="text"
+                      value={fbSubject}
+                      onChange={(e) => setFbSubject(e.target.value)}
+                      placeholder="Subject — e.g. 'Upload fails on large PDFs'"
+                      maxLength={120}
+                      className="w-full px-4 py-2.5 rounded-xl border border-[#E4E7EC] dark:border-[#222229] bg-white dark:bg-[#18181D] text-[14px] text-[#0A0A0F] dark:text-[#F0F0F5] placeholder:text-[#9CA3AF] focus:outline-none focus:border-[#0066FF] focus:ring-2 focus:ring-[#0066FF]/10 transition-all"
+                      style={{ fontFamily: 'var(--font-body)' }}
+                    />
+                  </div>
+
+                  {/* Message */}
+                  <div>
+                    <textarea
+                      value={fbMessage}
+                      onChange={(e) => setFbMessage(e.target.value)}
+                      placeholder="Describe the issue or suggestion in detail. Steps to reproduce, screenshots info, etc."
+                      maxLength={2000}
+                      rows={4}
+                      className="w-full px-4 py-2.5 rounded-xl border border-[#E4E7EC] dark:border-[#222229] bg-white dark:bg-[#18181D] text-[14px] text-[#0A0A0F] dark:text-[#F0F0F5] placeholder:text-[#9CA3AF] focus:outline-none focus:border-[#0066FF] focus:ring-2 focus:ring-[#0066FF]/10 transition-all resize-none"
+                      style={{ fontFamily: 'var(--font-body)' }}
+                    />
+                    <p className="text-right text-[11px] text-[#9CA3AF] mt-1" style={{ fontFamily: 'var(--font-body)' }}>
+                      {fbMessage.length}/2000
+                    </p>
+                  </div>
+
+                  <button
+                    type="submit"
+                    disabled={fbLoading || !fbSubject.trim() || !fbMessage.trim()}
+                    className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#0066FF] text-white hover:bg-[#0052CC] disabled:opacity-50 disabled:cursor-not-allowed text-[14px] font-medium transition-colors"
+                    style={{ fontFamily: 'var(--font-body)' }}
+                  >
+                    {fbLoading
+                      ? <div className="w-4 h-4 rounded-full border-2 border-white/30 border-t-white animate-spin" />
+                      : <PaperPlaneTilt size={15} weight="bold" />}
+                    {fbLoading ? 'Sending…' : 'Send feedback'}
+                  </button>
+                </form>
+              )}
+            </div>
 
             {/* ── Contact support card ── */}
             <div className="mt-6 rounded-2xl border border-[#E4E7EC] dark:border-[#222229] bg-white dark:bg-[#111115] p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">

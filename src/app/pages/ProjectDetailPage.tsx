@@ -1268,15 +1268,22 @@ export function ProjectDetailPage() {
             Full Document
           </h2>
         </div>
-        <button
-          onClick={handleDownload}
-          disabled={downloading}
-          className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full text-[14px] text-white bg-[#0066FF] hover:bg-[#0052CC] disabled:opacity-60 transition-colors"
-          style={{ fontFamily: 'var(--font-body)', fontWeight: 500 }}
-        >
-          {downloading ? <CircleNotch size={16} className="animate-spin" /> : <DownloadSimple size={16} weight="bold" />}
-          {downloading ? 'Preparing...' : 'Download PDF'}
-        </button>
+        {(project.is_downloadable ?? true) ? (
+          <button
+            onClick={handleDownload}
+            disabled={downloading}
+            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full text-[14px] text-white bg-[#0066FF] hover:bg-[#0052CC] disabled:opacity-60 transition-colors"
+            style={{ fontFamily: 'var(--font-body)', fontWeight: 500 }}
+          >
+            {downloading ? <CircleNotch size={16} className="animate-spin" /> : <DownloadSimple size={16} weight="bold" />}
+            {downloading ? 'Preparing...' : 'Download PDF'}
+          </button>
+        ) : (
+          <div className="inline-flex items-center gap-2 px-4 py-2.5 rounded-full text-[13px] bg-[#F3F4F6] dark:bg-[#18181D] border border-[#E4E7EC] dark:border-[#222229] text-[#9CA3AF]" style={{ fontFamily: 'var(--font-body)' }}>
+            <DownloadSimple size={15} />
+            Downloads are currently unavailable for this project
+          </div>
+        )}
       </div>
 
       {/* 12. Divider */}

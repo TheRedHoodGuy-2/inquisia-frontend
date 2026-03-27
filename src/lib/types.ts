@@ -85,6 +85,7 @@ export interface Project {
   ai_analysis: AIAnalysis | null
   is_special: boolean
   special_assigned_at: string | null
+  is_downloadable: boolean
   created_at: string
   updated_at: string
   approved_at: string | null

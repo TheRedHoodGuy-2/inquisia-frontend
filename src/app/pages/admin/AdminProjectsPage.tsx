@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import { Link } from 'react-router'
-import { MagnifyingGlass, X, WarningCircle, Star } from 'phosphor-react'
+import { MagnifyingGlass, X, WarningCircle, Star, DownloadSimple, ProhibitInset } from 'phosphor-react'
 import { projectsApi, adminApi } from '../../../lib/api'
 import type { Project } from '../../../lib/types'
 import { getCategoryStyle, relativeTime } from '../../../lib/utils'
@@ -64,6 +64,19 @@ export function AdminProjectsPage() {
       toast.success(project.is_special ? 'Special status removed.' : 'Project marked as special!')
     } else {
       toast.error((res as any).error ?? 'Failed to update special status.')
+    }
+    setActing(null)
+  }
+
+  const handleToggleDownloadable = async (project: Project) => {
+    setActing(project.id)
+    const next = !(project.is_downloadable ?? true)
+    const res = await adminApi.setDownloadable(project.id, next)
+    if (res.success) {
+      setProjects((prev) => prev.map((p) => p.id === project.id ? { ...p, is_downloadable: next } : p))
+      toast.success(next ? 'Downloads re-enabled.' : 'Downloads disabled.')
+    } else {
+      toast.error((res as any).error ?? 'Failed to update download setting.')
     }
     setActing(null)
   }
@@ -152,6 +165,18 @@ export function AdminProjectsPage() {
                     >
                       <Star size={11} weight={p.is_special ? 'fill' : 'regular'} />
                       {p.is_special ? 'Special' : 'Mark Special'}
+                    </button>
+                    <button
+                      onClick={() => handleToggleDownloadable(p)}
+                      disabled={acting === p.id}
+                      className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] transition-colors ${(p.is_downloadable ?? true) ? 'border border-[#E4E7EC] dark:border-[#222229] text-[#9CA3AF] hover:border-red-400 hover:text-red-500' : 'bg-red-100 dark:bg-red-900/20 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-800 hover:bg-red-200'}`}
+                      style={{ fontFamily: 'var(--font-body)' }}
+                      title={(p.is_downloadable ?? true) ? 'Disable downloads' : 'Enable downloads'}
+                    >
+                      {(p.is_downloadable ?? true)
+                        ? <><DownloadSimple size={11} />Downloads on</>
+                        : <><ProhibitInset size={11} />Downloads off</>
+                      }
                     </button>
                   </div>
                 </div>

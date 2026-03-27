@@ -358,6 +358,12 @@ export const adminApi = {
       method: 'POST',
       body: JSON.stringify({ special }),
     }),
+  // Download control
+  setDownloadable: (projectId: string, downloadable: boolean) =>
+    apiFetch<{ id: string; is_downloadable: boolean }>(`/api/admin/projects/${projectId}/downloadable`, {
+      method: 'POST',
+      body: JSON.stringify({ downloadable }),
+    }),
   // Announcements (admin)
   announcements: () => apiFetch<import('./types').Announcement[]>('/api/admin/announcements'),
   createAnnouncement: (payload: Omit<import('./types').Announcement, 'id'>) =>
@@ -592,6 +598,21 @@ export const conversationsApi = {
       body: JSON.stringify({ role, content }),
     }),
   messages: (id: string) => apiFetch<ElaraMessage[]>(`/api/ai/conversations/${id}/messages`),
+}
+
+// Feedback
+export const feedbackApi = {
+  submit: (data: { type: string; subject: string; message: string }) =>
+    apiFetch<{ id: string }>('/api/feedback', { method: 'POST', body: JSON.stringify(data) }),
+}
+
+export const adminFeedbackApi = {
+  list: (status?: string) =>
+    apiFetch<any[]>(`/api/admin/feedback${status ? `?status=${status}` : ''}`),
+  update: (id: string, data: { status?: string; admin_note?: string }) =>
+    apiFetch<any>(`/api/admin/feedback/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
+  delete: (id: string) =>
+    apiFetch<null>(`/api/admin/feedback/${id}`, { method: 'DELETE' }),
 }
 
 export { apiFetch }
