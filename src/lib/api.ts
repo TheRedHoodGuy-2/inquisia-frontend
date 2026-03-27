@@ -27,9 +27,10 @@ import type {
 
 // ─── Config ───────────────────────────────────────────────────────────────────
 
+// In development, use relative paths so Vite's proxy forwards /api/* to localhost:3000.
+// In production, set VITE_API_URL to the backend's full origin (e.g. https://api.inquisia.com).
 const BASE_URL =
-  (import.meta as ImportMeta & { env: Record<string, string> }).env?.VITE_API_URL ??
-  (typeof window !== 'undefined' ? `${window.location.protocol}//${window.location.hostname}:3000` : 'http://localhost:3000')
+  (import.meta as ImportMeta & { env: Record<string, string> }).env?.VITE_API_URL ?? ''
 
 // ─── Core Fetch ───────────────────────────────────────────────────────────────
 
