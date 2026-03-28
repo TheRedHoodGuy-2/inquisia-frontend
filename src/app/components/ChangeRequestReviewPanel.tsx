@@ -17,9 +17,12 @@ import {
   CalendarBlank,
   ArrowRight,
   Tag,
+  FilePdf,
+  Sparkle,
+  Warning,
 } from 'phosphor-react'
 import { toast } from 'sonner'
-import { supervisorApi } from '../../lib/api'
+import { supervisorApi, aiApi } from '../../lib/api'
 import type { ChangeRequest, Project } from '../../lib/types'
 import { relativeTime } from '../../lib/utils'
 
@@ -133,6 +136,142 @@ function FieldDiffRow({ field, current, proposed }: { field: string; current: st
             </p>
           )}
         </div>
+      </div>
+    </div>
+  )
+}
+
+// ─── PDF report diff row ──────────────────────────────────────────────────────
+
+function PdfReportDiffRow({
+  cr,
+  project,
+}: {
+  cr: ChangeRequest
+  project: Project | undefined
+}) {
+  const [summary, setSummary] = useState<string | null>(null)
+  const [loadingSummary, setLoadingSummary] = useState(false)
+
+  const handleSummarise = async () => {
+    setLoadingSummary(true)
+    const res = await aiApi.diffSummary(cr.id)
+    if (res.success) {
+      setSummary(res.data.summary)
+    } else {
+      toast.error(res.error ?? 'Elara could not summarise the changes.')
+    }
+    setLoadingSummary(false)
+  }
+
+  const oldScore = project?.plagiarism_score
+  const newScore = cr.new_plagiarism_score
+
+  return (
+    <div className="rounded-2xl border border-[#E5E7EB] dark:border-[#1C1C1C] overflow-hidden">
+      {/* Header */}
+      <div className="px-4 py-2.5 bg-[#F7F8FA] dark:bg-[#181818] border-b border-[#E5E7EB] dark:border-[#1C1C1C] flex items-center gap-2">
+        <FilePdf size={13} className="text-[#0066FF]" />
+        <span
+          className="text-[12px] text-[#374151] dark:text-[#8B8FA8]"
+          style={{ fontFamily: 'var(--font-body)', fontWeight: 600 }}
+        >
+          PDF Report
+        </span>
+      </div>
+
+      {/* PDF links */}
+      <div className="grid grid-cols-1 sm:grid-cols-[1fr_auto_1fr] gap-0">
+        {/* Current */}
+        <div className="p-3 bg-[#FFFBF0] dark:bg-[#1A1600] border-b sm:border-b-0 sm:border-r border-[#E5E7EB] dark:border-[#1C1C1C]">
+          <p className="text-[10px] uppercase tracking-wider text-[#D97706] mb-2" style={{ fontFamily: 'var(--font-body)', fontWeight: 600 }}>
+            Current
+          </p>
+          {project?.report_url ? (
+            <a
+              href={project.report_url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 text-[12px] text-[#0066FF] hover:underline"
+              style={{ fontFamily: 'var(--font-body)' }}
+            >
+              <FilePdf size={13} /> View current PDF
+            </a>
+          ) : (
+            <span className="text-[12px] text-[#9CA3AF]" style={{ fontFamily: 'var(--font-body)' }}>No PDF on file</span>
+          )}
+          {oldScore != null && (
+            <p className="text-[11px] text-[#9CA3AF] mt-1" style={{ fontFamily: 'var(--font-body)' }}>
+              Similarity: <span className={oldScore > 30 ? 'text-[#DC2626]' : 'text-[#16A34A]'}>{oldScore}%</span>
+            </p>
+          )}
+        </div>
+
+        {/* Arrow */}
+        <div className="hidden sm:flex items-center justify-center px-2 bg-[#F7F8FA] dark:bg-[#181818]">
+          <ArrowRight size={14} className="text-[#9CA3AF]" />
+        </div>
+
+        {/* Proposed */}
+        <div className="p-3 bg-[#F0FDF4] dark:bg-[#001A0A] sm:border-l border-[#E5E7EB] dark:border-[#1C1C1C]">
+          <p className="text-[10px] uppercase tracking-wider text-[#16A34A] mb-2" style={{ fontFamily: 'var(--font-body)', fontWeight: 600 }}>
+            Proposed
+          </p>
+          {cr.new_report_url ? (
+            <a
+              href={cr.new_report_url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 text-[12px] text-[#0066FF] hover:underline"
+              style={{ fontFamily: 'var(--font-body)' }}
+            >
+              <FilePdf size={13} /> View new PDF
+            </a>
+          ) : (
+            <span className="text-[12px] text-[#9CA3AF]" style={{ fontFamily: 'var(--font-body)' }}>No new PDF provided</span>
+          )}
+          {newScore != null && (
+            <p className="text-[11px] text-[#9CA3AF] mt-1" style={{ fontFamily: 'var(--font-body)' }}>
+              Similarity: <span className={newScore > 30 ? 'text-[#DC2626]' : 'text-[#16A34A]'}>{newScore}%</span>
+            </p>
+          )}
+        </div>
+      </div>
+
+      {/* Elara diff summary */}
+      <div className="px-4 py-3 border-t border-[#E5E7EB] dark:border-[#1C1C1C] bg-[#F7F8FA] dark:bg-[#181818]">
+        {summary ? (
+          <div className="space-y-2">
+            <div className="flex items-center gap-1.5">
+              <Sparkle size={12} className="text-[#0066FF]" weight="fill" />
+              <span className="text-[11px] text-[#0066FF] uppercase tracking-wider" style={{ fontFamily: 'var(--font-body)', fontWeight: 600 }}>
+                Elara's summary
+              </span>
+            </div>
+            <p className="text-[12px] text-[#374151] dark:text-[#D1D5DB] leading-relaxed whitespace-pre-line" style={{ fontFamily: 'var(--font-body)' }}>
+              {summary}
+            </p>
+          </div>
+        ) : (
+          <button
+            onClick={handleSummarise}
+            disabled={loadingSummary || !cr.new_pdf_text}
+            className="flex items-center gap-1.5 text-[12px] text-[#0066FF] hover:underline disabled:opacity-50 disabled:cursor-not-allowed"
+            style={{ fontFamily: 'var(--font-body)', fontWeight: 500 }}
+          >
+            {loadingSummary ? (
+              <div className="w-3 h-3 rounded-full border-2 border-[#0066FF30] border-t-[#0066FF] animate-spin" />
+            ) : (
+              <Sparkle size={13} weight="fill" />
+            )}
+            {loadingSummary ? 'Elara is reading…' : 'Ask Elara to summarise changes'}
+            {!cr.new_pdf_text && !loadingSummary && (
+              <span className="flex items-center gap-0.5 text-[#D97706]">
+                <Warning size={11} /> No PDF text available
+              </span>
+            )}
+          </button>
+        )}
       </div>
     </div>
   )
@@ -260,14 +399,18 @@ export function ChangeRequestReviewPanel({
                   Proposed changes
                 </p>
                 <div className="space-y-3">
-                  {cr.fields.map((field) => (
-                    <FieldDiffRow
-                      key={field}
-                      field={field}
-                      current={project ? getCurrentValue(project, field) : '—'}
-                      proposed={getProposedValue(cr, field)}
-                    />
-                  ))}
+                  {cr.fields.map((field) =>
+                    field === 'PDF Report' ? (
+                      <PdfReportDiffRow key={field} cr={cr} project={project} />
+                    ) : (
+                      <FieldDiffRow
+                        key={field}
+                        field={field}
+                        current={project ? getCurrentValue(project, field) : '—'}
+                        proposed={getProposedValue(cr, field)}
+                      />
+                    )
+                  )}
                 </div>
               </div>
 

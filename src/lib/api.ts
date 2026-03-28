@@ -454,6 +454,11 @@ export const aiApi = {
     }),
   compareVersions: (projectId: string) =>
     apiFetch<{ comparison: string }>(`/api/projects/${projectId}/ai/compare-versions`, { method: 'POST' }),
+  diffSummary: (changeRequestId: string) =>
+    apiFetch<{ summary: string }>('/api/ai/diff', {
+      method: 'POST',
+      body: JSON.stringify({ change_request_id: changeRequestId }),
+    }),
 }
 
 // Helper to map backend CommentNode matches to frontend Comment interface

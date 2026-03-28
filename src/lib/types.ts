@@ -192,6 +192,11 @@ export interface ChangeRequest {
   proposed_data: Record<string, unknown>
   status: 'pending' | 'approved' | 'denied'
   response: string | null
+  new_report_url: string | null
+  new_pdf_text: string | null
+  new_plagiarism_score: number | null
+  similar_project_id: string | null
+  similarity_reason: string | null
   created_at: string
   updated_at: string
 }
