@@ -4,13 +4,14 @@ import {
   DownloadSimple, CalendarBlank, GithubLogo, ArrowSquareOut,
   Copy, Check, ChatCircle, Robot, PaperPlaneTilt,
   WarningCircle, CaretDown, CaretUp, X, CircleNotch, ArrowBendUpLeft,
-  CheckCircle, XCircle, GitDiff, DotsThreeVertical, PencilSimple, Trash, BookmarkSimple
+  CheckCircle, XCircle, GitDiff, DotsThreeVertical, PencilSimple, Trash, BookmarkSimple,
+  ClockCounterClockwise, FilePdf, Swap, Info
 } from 'phosphor-react'
 import { motion, AnimatePresence } from 'motion/react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { projectsApi, commentsApi, aiApi, supervisorApi, bookmarksApi } from '../../lib/api'
-import type { Project, Comment } from '../../lib/types'
+import type { Project, Comment, ProjectVersion } from '../../lib/types'
 import { useSession } from '../../context/SessionContext'
 import { useTheme } from '../../context/ThemeContext'
 import { ElaraLogo } from '../components/ui/ElaraLogo'
@@ -795,6 +796,179 @@ function CommentsSection({ projectId, project }: { projectId: string; project?: 
   )
 }
 
+// ─── Version History Panel ────────────────────────────────────────────────────
+
+function VersionHistoryPanel({
+  project,
+  versions,
+  loading,
+  canSetActive,
+  onSetActive,
+  settingVersion,
+}: {
+  project: Project
+  versions: ProjectVersion[]
+  loading: boolean
+  canSetActive: boolean
+  onSetActive: (versionNumber: number) => void
+  settingVersion: number | null
+}) {
+  const [expanded, setExpanded] = useState(false)
+  const [expandedFeedback, setExpandedFeedback] = useState<number | null>(null)
+
+  if (!loading && versions.length <= 1) return null
+
+  return (
+    <div className="rounded-2xl border border-[#E4E7EC] dark:border-[#222229] mb-8 overflow-hidden">
+      <button
+        onClick={() => setExpanded((v) => !v)}
+        className="w-full flex items-center justify-between px-5 py-4 hover:bg-[#F7F8FA] dark:hover:bg-[#18181D] transition-colors"
+      >
+        <div className="flex items-center gap-2">
+          <ClockCounterClockwise size={16} className="text-[#9CA3AF]" />
+          <span className="text-[13px] font-semibold text-[#0A0A0F] dark:text-[#F5F5F5]" style={{ fontFamily: 'var(--font-display)' }}>
+            Version History
+          </span>
+          {versions.length > 0 && (
+            <span className="px-2 py-0.5 rounded-full text-[11px] bg-[#F2F4F7] dark:bg-[#18181D] text-[#6B7280]" style={{ fontFamily: 'var(--font-body)' }}>
+              {versions.length} version{versions.length !== 1 ? 's' : ''}
+            </span>
+          )}
+        </div>
+        {expanded ? <CaretUp size={14} className="text-[#9CA3AF]" /> : <CaretDown size={14} className="text-[#9CA3AF]" />}
+      </button>
+
+      <AnimatePresence>
+        {expanded && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="overflow-hidden"
+          >
+            {loading ? (
+              <div className="px-5 py-4 text-center">
+                <CircleNotch size={18} className="animate-spin text-[#9CA3AF] mx-auto" />
+              </div>
+            ) : versions.length === 0 ? (
+              <div className="px-5 py-4 text-center">
+                <p className="text-[13px] text-[#9CA3AF]" style={{ fontFamily: 'var(--font-body)' }}>No version history available.</p>
+              </div>
+            ) : (
+              <div className="divide-y divide-[#E4E7EC] dark:divide-[#222229] border-t border-[#E4E7EC] dark:border-[#222229]">
+                {versions.map((v) => {
+                  const isActive = v.report_url === project.report_url
+                  const hasFeedback = !!v.supervisor_feedback
+                  const feedbackOpen = expandedFeedback === v.version_number
+                  return (
+                    <div key={v.id} className={`px-5 py-4 ${isActive ? 'bg-[#0066FF04]' : ''}`}>
+                      <div className="flex items-start gap-3">
+                        {/* Version badge */}
+                        <div className={`w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 text-[13px] font-bold ${isActive ? 'bg-[#0066FF] text-white' : 'bg-[#F2F4F7] dark:bg-[#18181D] text-[#6B7280]'}`}
+                          style={{ fontFamily: 'var(--font-display)' }}>
+                          v{v.version_number}
+                        </div>
+
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap mb-1">
+                            <span className="text-[13px] font-semibold text-[#0A0A0F] dark:text-[#F5F5F5]" style={{ fontFamily: 'var(--font-display)' }}>
+                              Version {v.version_number}
+                            </span>
+                            {isActive && (
+                              <span className="px-2 py-0.5 rounded-full text-[10px] bg-[#0066FF1A] text-[#0066FF]" style={{ fontFamily: 'var(--font-body)', fontWeight: 600 }}>
+                                Active
+                              </span>
+                            )}
+                            {v.plagiarism_score !== null && (
+                              <span className={`px-2 py-0.5 rounded-full text-[10px] font-medium ${v.plagiarism_score > 30 ? 'bg-red-100 dark:bg-red-900/20 text-red-600 dark:text-red-400' : 'bg-green-100 dark:bg-green-900/20 text-green-700 dark:text-green-400'}`}
+                                style={{ fontFamily: 'var(--font-mono)' }}>
+                                {v.plagiarism_score}% sim
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-[11px] text-[#9CA3AF] mb-2" style={{ fontFamily: 'var(--font-body)' }}>
+                            {new Date(v.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
+                          </p>
+
+                          {/* Similarity reason (compact) */}
+                          {v.similarity_reason && v.plagiarism_score !== null && v.plagiarism_score > 15 && (
+                            <p className="text-[11px] text-[#9CA3AF] mb-2 leading-relaxed" style={{ fontFamily: 'var(--font-body)' }}>
+                              {v.similarity_reason.slice(0, 120)}{v.similarity_reason.length > 120 ? '…' : ''}
+                            </p>
+                          )}
+
+                          {/* Supervisor feedback toggle */}
+                          {hasFeedback && (
+                            <button
+                              onClick={() => setExpandedFeedback(feedbackOpen ? null : v.version_number)}
+                              className="flex items-center gap-1.5 text-[11px] text-[#6B7280] hover:text-[#0066FF] transition-colors mb-2"
+                              style={{ fontFamily: 'var(--font-body)' }}
+                            >
+                              {feedbackOpen ? <CaretUp size={10} /> : <CaretDown size={10} />}
+                              Supervisor feedback
+                            </button>
+                          )}
+                          <AnimatePresence>
+                            {feedbackOpen && v.supervisor_feedback && (
+                              <motion.div
+                                initial={{ height: 0, opacity: 0 }}
+                                animate={{ height: 'auto', opacity: 1 }}
+                                exit={{ height: 0, opacity: 0 }}
+                                transition={{ duration: 0.15 }}
+                                className="overflow-hidden"
+                              >
+                                <div className="rounded-xl bg-[#F7F8FA] dark:bg-[#18181D] border border-[#E4E7EC] dark:border-[#222229] px-3 py-2 mb-2">
+                                  <p className="text-[12px] text-[#374151] dark:text-[#8B8FA8] leading-relaxed whitespace-pre-wrap" style={{ fontFamily: 'var(--font-body)' }}>
+                                    {v.supervisor_feedback}
+                                  </p>
+                                </div>
+                              </motion.div>
+                            )}
+                          </AnimatePresence>
+
+                          {/* Actions */}
+                          <div className="flex items-center gap-2">
+                            {v.report_url && (
+                              <a
+                                href={v.report_url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] border border-[#E4E7EC] dark:border-[#222229] text-[#6B7280] hover:border-[#0066FF] hover:text-[#0066FF] transition-colors"
+                                style={{ fontFamily: 'var(--font-body)' }}
+                              >
+                                <FilePdf size={11} /> View PDF
+                              </a>
+                            )}
+                            {canSetActive && !isActive && v.report_url && (
+                              <button
+                                onClick={() => onSetActive(v.version_number)}
+                                disabled={settingVersion !== null}
+                                className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] border border-[#0066FF33] text-[#0066FF] hover:bg-[#0066FF0D] disabled:opacity-50 transition-colors"
+                                style={{ fontFamily: 'var(--font-body)' }}
+                              >
+                                {settingVersion === v.version_number
+                                  ? <CircleNotch size={10} className="animate-spin" />
+                                  : <Swap size={10} />
+                                }
+                                Set as Active
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  )
+}
+
 // ─── Page ───────────────────────────────���─────────────────────────────────────
 
 // Supervisor actions: approve / request changes / reject
@@ -977,6 +1151,10 @@ export function ProjectDetailPage() {
   const [isBookmarked, setIsBookmarked] = useState(false)
   const [bookmarking, setBookmarking] = useState(false)
   const [downloading, setDownloading] = useState(false)
+  const [versions, setVersions] = useState<ProjectVersion[]>([])
+  const [versionsLoading, setVersionsLoading] = useState(false)
+  const [showSimilarityReport, setShowSimilarityReport] = useState(false)
+  const [settingVersion, setSettingVersion] = useState<number | null>(null)
 
   useEffect(() => {
     if (!id) return
@@ -994,6 +1172,15 @@ export function ProjectDetailPage() {
     } else {
       setIsBookmarked(false)
     }
+  }, [id, user])
+
+  useEffect(() => {
+    if (!id || !user) return
+    setVersionsLoading(true)
+    projectsApi.versions(id).then((res) => {
+      if (res.success) setVersions(res.data as ProjectVersion[])
+      setVersionsLoading(false)
+    })
   }, [id, user])
 
   if (loading) {
@@ -1038,6 +1225,21 @@ export function ProjectDetailPage() {
       }
     }
     setBookmarking(false)
+  }
+
+  const handleSetDisplayVersion = async (versionNumber: number) => {
+    if (!project || !id) return
+    setSettingVersion(versionNumber)
+    const res = await projectsApi.setDisplayVersion(id, versionNumber)
+    if (res.success) {
+      toast.success(`Version ${versionNumber} is now the active display version.`)
+      // Refresh project
+      const refreshed = await projectsApi.get(id)
+      if (refreshed.success) setProject(refreshed.data)
+    } else {
+      toast.error((res as any).error ?? 'Failed to set version.')
+    }
+    setSettingVersion(null)
   }
 
   const handleDownload = async (e: React.MouseEvent) => {
@@ -1173,17 +1375,62 @@ export function ProjectDetailPage() {
         {canSeePlagiarism && project.plagiarism_score !== null && (
           <>
             <span className="text-[#E4E7EC] dark:text-[#222229]">•</span>
-            <span
-              className={`px-2.5 py-0.5 rounded-full text-[11px] font-medium ${project.plagiarism_score > 30 ? 'bg-[#FEF2F2] dark:bg-red-900/20 text-[#DC2626] dark:text-red-400' : 'bg-[#F0FDF4] dark:bg-green-900/20 text-[#16A34A] dark:text-green-400'}`}
-              style={{
-                fontFamily: 'var(--font-mono)',
-              }}
+            <button
+              onClick={() => setShowSimilarityReport((v) => !v)}
+              className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-medium transition-all hover:opacity-80 ${project.plagiarism_score > 30 ? 'bg-[#FEF2F2] dark:bg-red-900/20 text-[#DC2626] dark:text-red-400' : 'bg-[#F0FDF4] dark:bg-green-900/20 text-[#16A34A] dark:text-green-400'}`}
+              style={{ fontFamily: 'var(--font-mono)' }}
+              title="Click to view similarity report"
             >
+              <Info size={10} />
               {project.plagiarism_score}% similarity
-            </span>
+            </button>
           </>
         )}
       </div>
+
+      {/* Similarity report panel */}
+      <AnimatePresence>
+        {showSimilarityReport && canSeePlagiarism && project.plagiarism_score !== null && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            transition={{ duration: 0.2 }}
+            className="overflow-hidden mb-4"
+          >
+            <div className={`rounded-2xl border p-4 ${project.plagiarism_score > 30 ? 'bg-red-50 dark:bg-red-900/10 border-red-200 dark:border-red-900/30' : 'bg-[#F0FDF4] dark:bg-green-900/10 border-green-200 dark:border-green-900/30'}`}>
+              <div className="flex items-center justify-between mb-3">
+                <h4 className="text-[13px] font-semibold" style={{ fontFamily: 'var(--font-display)', color: project.plagiarism_score > 30 ? '#DC2626' : '#16A34A' }}>
+                  Similarity Report
+                </h4>
+                <span className={`text-[20px] font-bold`} style={{ fontFamily: 'var(--font-mono)', color: project.plagiarism_score > 30 ? '#DC2626' : '#16A34A' }}>
+                  {project.plagiarism_score}%
+                </span>
+              </div>
+              <p className="text-[12px] mb-1 font-medium" style={{ fontFamily: 'var(--font-body)', color: project.plagiarism_score > 30 ? '#DC2626' : '#16A34A' }}>
+                {project.plagiarism_score > 30 ? '⚠ High similarity detected' : project.plagiarism_score > 15 ? '⚡ Moderate similarity' : '✓ Low similarity — within acceptable range'}
+              </p>
+              {project.similarity_reason && (
+                <p className="text-[12px] text-[#6B7280] dark:text-[#8B8FA8] leading-relaxed mb-2" style={{ fontFamily: 'var(--font-body)' }}>
+                  {project.similarity_reason}
+                </p>
+              )}
+              {project.similar_project_id && (
+                <Link
+                  to={`/projects/${project.similar_project_id}`}
+                  className="inline-flex items-center gap-1.5 text-[12px] font-medium hover:underline"
+                  style={{ color: project.plagiarism_score > 30 ? '#DC2626' : '#16A34A', fontFamily: 'var(--font-body)' }}
+                >
+                  View matched project <ArrowSquareOut size={11} />
+                </Link>
+              )}
+              {!project.similarity_reason && !project.similar_project_id && (
+                <p className="text-[12px] text-[#9CA3AF]" style={{ fontFamily: 'var(--font-body)' }}>No detailed similarity data available for this version.</p>
+              )}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* 5b. Severe Similarity Warning */}
       {canSeePlagiarism && project.plagiarism_score !== null && project.plagiarism_score > 30 && project.similar_project_id && (
@@ -1219,6 +1466,18 @@ export function ProjectDetailPage() {
         <StudentActionsPanel
           project={project}
           onUpdate={(p) => setProject(prev => prev ? { ...prev, ...p } : p)}
+        />
+      )}
+
+      {/* 6d. Version History */}
+      {canSeePlagiarism && (
+        <VersionHistoryPanel
+          project={project}
+          versions={versions}
+          loading={versionsLoading}
+          canSetActive={(user?.role === 'supervisor' && user.id === project.supervisor_id) || user?.role === 'admin'}
+          onSetActive={handleSetDisplayVersion}
+          settingVersion={settingVersion}
         />
       )}
 

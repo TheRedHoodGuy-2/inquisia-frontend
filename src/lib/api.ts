@@ -247,6 +247,8 @@ export const projectsApi = {
    * Resubmit a rejected project (POST /api/projects/:id/resubmit).
    * Backend expects: `file` (PDF) + `metadata` JSON string containing { notes }.
    */
+  setDisplayVersion: (projectId: string, versionNumber: number) =>
+    apiFetch<null>(`/api/projects/${projectId}/versions`, { method: 'POST', body: JSON.stringify({ version_number: versionNumber }) }),
   resubmit: (projectId: string, file: File, payload: { notes?: string; title?: string; abstract?: string; co_authors?: string[] }) => {
     const fd = new FormData()
     fd.append('file', file)

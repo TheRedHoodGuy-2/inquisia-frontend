@@ -96,8 +96,8 @@ export function ChangeRequestModal({ project, onClose, onSuccess }: ChangeReques
   }
 
   const handleSubmit = async () => {
-    if (selectedFields.length === 0) {
-      toast.error('Select at least one field to change.')
+    if (selectedFields.length === 0 && !newPdf) {
+      toast.error('Select at least one field to change, or upload a replacement PDF.')
       return
     }
     if (!reason.trim() || reason.trim().length < 20) {
@@ -124,8 +124,12 @@ export function ChangeRequestModal({ project, onClose, onSuccess }: ChangeReques
       }
     }
 
+    // Backend uses "PDF Report" as the field name to trigger PDF processing
+    const fieldsToSend: string[] = [...selectedFields]
+    if (newPdf && !fieldsToSend.includes('PDF Report')) fieldsToSend.push('PDF Report')
+
     const formData = new FormData()
-    formData.append('fields', JSON.stringify(selectedFields))
+    formData.append('fields', JSON.stringify(fieldsToSend))
     formData.append('reason', reason.trim())
     formData.append('proposedData', JSON.stringify(proposedData))
     if (newPdf) formData.append('reportFile', newPdf)
@@ -325,7 +329,7 @@ export function ChangeRequestModal({ project, onClose, onSuccess }: ChangeReques
               </button>
               <button
                 onClick={() => void handleSubmit()}
-                disabled={submitting || selectedFields.length === 0}
+                disabled={submitting || (selectedFields.length === 0 && !newPdf)}
                 className="flex-1 py-2.5 rounded-full text-[13px] text-white bg-[#0066FF] hover:bg-[#0052CC] disabled:opacity-50 transition-colors flex items-center justify-center gap-2"
                 style={{ fontFamily: 'var(--font-body)', fontWeight: 500 }}
               >

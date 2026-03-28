@@ -51,17 +51,19 @@ export interface ProjectVersion {
   id: string
   project_id: string
   version_number: number
-  status: ProjectStatus
   supervisor_feedback: string | null
   created_at: string
   report_url: string | null
   plagiarism_score: number | null
+  similar_project_id: string | null
+  similarity_reason: string | null
 }
 
 export interface Project {
   id: string
   title: string
   abstract: string
+  version?: number
   pdf_text: string | null
   student_tags: string[]
   ai_tags: string[]
