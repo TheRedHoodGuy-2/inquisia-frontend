@@ -17,6 +17,7 @@ import type {
   PublicStats,
   PaginatedResponse,
   ChangeRequest,
+  DeleteRequest,
   AdminUserRow,
   ProjectVersion,
   ElaraSettings,
@@ -222,6 +223,13 @@ export const projectsApi = {
     return apiFetch<Project>(`/api/projects/${id}`, { method: 'PATCH', body: fd })
   },
   delete: (id: string) => apiFetch<null>(`/api/projects/${id}`, { method: 'DELETE' }),
+  getDeleteRequest: (id: string) => apiFetch<DeleteRequest | null>(`/api/projects/${id}/delete-request`),
+  requestDelete: (id: string, reason?: string) =>
+    apiFetch<DeleteRequest>(`/api/projects/${id}/delete-request`, { method: 'POST', body: JSON.stringify({ reason: reason ?? '' }) }),
+  voteDelete: (id: string, vote: 'approve' | 'reject') =>
+    apiFetch<{ status: string; deleted?: boolean }>(`/api/projects/${id}/delete-request`, { method: 'PATCH', body: JSON.stringify({ vote }) }),
+  cancelDeleteRequest: (id: string) =>
+    apiFetch<{ status: string }>(`/api/projects/${id}/delete-request`, { method: 'PATCH', body: JSON.stringify({ action: 'cancel' }) }),
   versions: (id: string) => apiFetch<ProjectVersion[]>(`/api/projects/${id}/versions`),
   related: (id: string, category?: string) =>
     apiFetch<Project[]>(`/api/projects/${id}/related${category ? `?category=${category}` : ''}`),
@@ -280,6 +288,8 @@ export const supervisorApi = {
       method: 'PATCH',
       body: JSON.stringify({ status, feedback }),
     }),
+  runAiDetect: (projectId: string) =>
+    apiFetch<{ score: number; checked_at: string }>(`/api/projects/${projectId}/ai-detect`, { method: 'POST' }),
   approveChangeRequest: (id: string, response: string) =>
     apiFetch<ChangeRequest>(`/api/change-requests/${id}/resolve`, {
       method: 'PATCH',

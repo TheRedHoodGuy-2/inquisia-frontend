@@ -971,14 +971,40 @@ function VersionHistoryPanel({
 
 // ─── Page ───────────────────────────────���─────────────────────────────────────
 
-// Supervisor actions: approve / request changes / reject
+// Supervisor actions: approve / request changes / reject + AI detection
 function SupervisorActionsPanel({ project, onUpdate }: { project: Project; onUpdate: (p: Project) => void }) {
   const [action, setAction] = useState<'approve' | 'changes' | 'reject' | null>(null)
   const [feedback, setFeedback] = useState('')
   const [loading, setLoading] = useState(false)
+  const [aiDetecting, setAiDetecting] = useState(false)
+  const [aiScore, setAiScore] = useState<number | null>(project.ai_writing_score ?? null)
+  const [aiCheckedAt, setAiCheckedAt] = useState<string | null>(project.ai_writing_checked_at ?? null)
+  const [showAiReport, setShowAiReport] = useState(false)
 
   const canReview = project.status === 'pending' || project.status === 'changes_requested'
-  if (!canReview) return null
+
+  const handleAiDetect = async () => {
+    setAiDetecting(true)
+    const res = await supervisorApi.runAiDetect(project.id)
+    if (res.success) {
+      setAiScore(res.data.score)
+      setAiCheckedAt(res.data.checked_at)
+      setShowAiReport(true)
+    } else {
+      // toast not available here without import — use a simple alert fallback
+      console.error('AI detection failed:', res.error)
+    }
+    setAiDetecting(false)
+  }
+
+  const aiPercent = aiScore !== null ? Math.round(aiScore * 100) : null
+  const aiLevel = aiPercent === null ? null : aiPercent >= 50 ? 'high' : aiPercent >= 20 ? 'moderate' : 'low'
+  const aiColor = { high: '#DC2626', moderate: '#D97706', low: '#16A34A' }
+  const aiBg = { high: 'bg-red-50 dark:bg-red-900/10 border-red-200 dark:border-red-900/30', moderate: 'bg-amber-50 dark:bg-amber-900/10 border-amber-200 dark:border-amber-900/30', low: 'bg-[#F0FDF4] dark:bg-green-900/10 border-green-200 dark:border-green-900/30' }
+  const aiLabel = { high: '⚠ High AI usage — content likely AI-generated', moderate: '⚡ Moderate AI usage detected — may contain AI assistance', low: '✓ Low AI usage — content appears largely human-written' }
+
+  // Show panel only if there's something to do (review actions) OR a previous AI result to display
+  if (!canReview && aiScore === null) return null
 
   const handleReview = async () => {
     if (!action) return
@@ -1036,34 +1062,106 @@ function SupervisorActionsPanel({ project, onUpdate }: { project: Project; onUpd
       </div>
 
       {/* Action buttons */}
-      <div className="flex flex-wrap gap-2">
-        <button
-          onClick={() => { setAction('approve'); setTimeout(() => void handleReview(), 0) }}
-          disabled={loading}
-          className="flex items-center gap-1.5 px-4 py-2 rounded-full text-[13px] text-white bg-[#0066FF] hover:bg-[#0052CC] disabled:opacity-50 transition-colors"
-          style={{ fontFamily: 'var(--font-body)', fontWeight: 500 }}
-        >
-          <CheckCircle size={14} weight="bold" />
-          {loading && action === 'approve' ? 'Approving...' : 'Approve'}
-        </button>
-        <button
-          onClick={() => { setAction('changes'); setTimeout(() => void handleReview(), 0) }}
-          disabled={loading}
-          className="flex items-center gap-1.5 px-4 py-2 rounded-full text-[13px] border border-[#C9D0DA] dark:border-[#222229] text-[#374151] dark:text-[#8B8FA8] hover:border-[#0066FF] hover:text-[#0066FF] disabled:opacity-50 transition-colors"
-          style={{ fontFamily: 'var(--font-body)', fontWeight: 500 }}
-        >
-          <GitDiff size={14} />
-          Request Changes
-        </button>
-        <button
-          onClick={() => { setAction('reject'); setTimeout(() => void handleReview(), 0) }}
-          disabled={loading}
-          className="flex items-center gap-1.5 px-4 py-2 rounded-full text-[13px] border border-[#EF4444]/40 text-[#EF4444] hover:bg-red-50 dark:hover:bg-red-900/10 disabled:opacity-50 transition-colors"
-          style={{ fontFamily: 'var(--font-body)', fontWeight: 500 }}
-        >
-          <XCircle size={14} />
-          Reject
-        </button>
+      {canReview && (
+        <div className="flex flex-wrap gap-2">
+          <button
+            onClick={() => { setAction('approve'); setTimeout(() => void handleReview(), 0) }}
+            disabled={loading}
+            className="flex items-center gap-1.5 px-4 py-2 rounded-full text-[13px] text-white bg-[#0066FF] hover:bg-[#0052CC] disabled:opacity-50 transition-colors"
+            style={{ fontFamily: 'var(--font-body)', fontWeight: 500 }}
+          >
+            <CheckCircle size={14} weight="bold" />
+            {loading && action === 'approve' ? 'Approving...' : 'Approve'}
+          </button>
+          <button
+            onClick={() => { setAction('changes'); setTimeout(() => void handleReview(), 0) }}
+            disabled={loading}
+            className="flex items-center gap-1.5 px-4 py-2 rounded-full text-[13px] border border-[#C9D0DA] dark:border-[#222229] text-[#374151] dark:text-[#8B8FA8] hover:border-[#0066FF] hover:text-[#0066FF] disabled:opacity-50 transition-colors"
+            style={{ fontFamily: 'var(--font-body)', fontWeight: 500 }}
+          >
+            <GitDiff size={14} />
+            Request Changes
+          </button>
+          <button
+            onClick={() => { setAction('reject'); setTimeout(() => void handleReview(), 0) }}
+            disabled={loading}
+            className="flex items-center gap-1.5 px-4 py-2 rounded-full text-[13px] border border-[#EF4444]/40 text-[#EF4444] hover:bg-red-50 dark:hover:bg-red-900/10 disabled:opacity-50 transition-colors"
+            style={{ fontFamily: 'var(--font-body)', fontWeight: 500 }}
+          >
+            <XCircle size={14} />
+            Reject
+          </button>
+        </div>
+      )}
+
+      {/* AI Detection */}
+      <div className={`${canReview ? 'mt-4 pt-4 border-t border-[#0066FF20]' : ''}`}>
+        <div className="flex items-center justify-between mb-2">
+          <span className="text-[11px] uppercase tracking-wider text-[#9CA3AF]" style={{ fontFamily: 'var(--font-body)', fontWeight: 600 }}>
+            AI Writing Detection
+          </span>
+          {aiCheckedAt && (
+            <span className="text-[10px] text-[#9CA3AF]" style={{ fontFamily: 'var(--font-mono)' }}>
+              Last run: {new Date(aiCheckedAt).toLocaleDateString()}
+            </span>
+          )}
+        </div>
+
+        {/* Score badge + toggle */}
+        <div className="flex items-center gap-2 flex-wrap">
+          <button
+            onClick={() => void handleAiDetect()}
+            disabled={aiDetecting}
+            className="flex items-center gap-1.5 px-4 py-2 rounded-full text-[13px] border border-[#C9D0DA] dark:border-[#222229] text-[#374151] dark:text-[#8B8FA8] hover:border-[#0066FF] hover:text-[#0066FF] disabled:opacity-50 transition-colors"
+            style={{ fontFamily: 'var(--font-body)', fontWeight: 500 }}
+          >
+            {aiDetecting
+              ? <><CircleNotch size={14} className="animate-spin" /> Analyzing...</>
+              : <><Robot size={14} /> {aiScore !== null ? 'Re-run Detection' : 'Run AI Detection'}</>
+            }
+          </button>
+          {aiPercent !== null && (
+            <button
+              onClick={() => setShowAiReport(v => !v)}
+              className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-medium transition-all hover:opacity-80"
+              style={{ fontFamily: 'var(--font-mono)', color: aiColor[aiLevel!], backgroundColor: aiLevel === 'high' ? '#FEF2F2' : aiLevel === 'moderate' ? '#FFFBEB' : '#F0FDF4' }}
+            >
+              <Robot size={10} />
+              {aiPercent}% AI
+            </button>
+          )}
+        </div>
+
+        {/* AI Report Panel */}
+        <AnimatePresence>
+          {showAiReport && aiPercent !== null && aiLevel && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              exit={{ opacity: 0, height: 0 }}
+              transition={{ duration: 0.2 }}
+              className="overflow-hidden mt-3"
+            >
+              <div className={`rounded-2xl border p-4 ${aiBg[aiLevel]}`}>
+                <div className="flex items-center justify-between mb-2">
+                  <h4 className="text-[13px] font-semibold" style={{ fontFamily: 'var(--font-display)', color: aiColor[aiLevel] }}>
+                    AI Writing Report
+                  </h4>
+                  <span className="text-[20px] font-bold" style={{ fontFamily: 'var(--font-mono)', color: aiColor[aiLevel] }}>
+                    {aiPercent}%
+                  </span>
+                </div>
+                <p className="text-[12px] font-medium mb-1" style={{ fontFamily: 'var(--font-body)', color: aiColor[aiLevel] }}>
+                  {aiLabel[aiLevel]}
+                </p>
+                <p className="text-[11px] text-[#9CA3AF] leading-relaxed" style={{ fontFamily: 'var(--font-body)' }}>
+                  Score reflects the probability of AI-generated content detected by Sapling AI across the full document text.
+                  {aiLevel === 'high' && ' Consider asking the student to clarify their writing process.'}
+                </p>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
     </div>
   )
@@ -1155,6 +1253,8 @@ export function ProjectDetailPage() {
   const [versionsLoading, setVersionsLoading] = useState(false)
   const [showSimilarityReport, setShowSimilarityReport] = useState(false)
   const [settingVersion, setSettingVersion] = useState<number | null>(null)
+  const [deleteRequest, setDeleteRequest] = useState<import('../../lib/types').DeleteRequest | null>(null)
+  const [votingDelete, setVotingDelete] = useState(false)
 
   useEffect(() => {
     if (!id) return
@@ -1168,6 +1268,10 @@ export function ProjectDetailPage() {
     if (user) {
       bookmarksApi.check(id).then((res) => {
         if (res.success) setIsBookmarked(res.data.is_bookmarked)
+      })
+      // Fetch pending delete request if user could be a voter (co-author or supervisor)
+      projectsApi.getDeleteRequest(id).then((res) => {
+        if (res.success) setDeleteRequest(res.data)
       })
     } else {
       setIsBookmarked(false)
@@ -1269,24 +1373,13 @@ export function ProjectDetailPage() {
     <div className="max-w-[720px] mx-auto px-5 md:px-0 pt-12 pb-32 sm:pb-24">
       {/* Featured banner */}
       {project.is_special && (
-        <div
-          className="flex items-center gap-3 rounded-2xl px-4 py-3 mb-6 border"
-          style={{
-            background: 'linear-gradient(135deg, rgba(184,134,11,0.08), rgba(212,175,55,0.12))',
-            borderColor: 'rgba(212,175,55,0.35)',
-            boxShadow: '0 0 0 1px rgba(212,175,55,0.15)',
-            animation: 'goldShimmer 3s ease-in-out infinite',
-          }}
-        >
-          <span className="text-[18px] leading-none">★</span>
-          <div>
-            <p className="text-[13px] font-semibold" style={{ fontFamily: 'var(--font-display)', color: '#B8860B' }}>
-              Featured Project
-            </p>
-            <p className="text-[12px]" style={{ fontFamily: 'var(--font-body)', color: '#92711A' }}>
-              Hand-picked by the Inquisia team as exemplary work.
-            </p>
-          </div>
+        <div className="mb-5">
+          <span
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[12px] font-semibold"
+            style={{ background: 'linear-gradient(135deg, #7B5E00, #B8860B)', color: '#FFF8DC', fontFamily: 'var(--font-body)' }}
+          >
+            ★ Featured Project
+          </span>
         </div>
       )}
 
@@ -1468,6 +1561,77 @@ export function ProjectDetailPage() {
           onUpdate={(p) => setProject(prev => prev ? { ...prev, ...p } : p)}
         />
       )}
+
+      {/* 6c-del. Delete vote panel — shown to co-authors and supervisor when there's a pending delete request */}
+      {deleteRequest?.status === 'pending' && user && (() => {
+        const isSupervisor = user.id === project.supervisor_id
+        const isCoAuthor = authors.some((a) => a.id === user.id) && project.uploaded_by !== user.id
+        if (!isSupervisor && !isCoAuthor) return null
+
+        const myVote = deleteRequest.votes.find(v => v.voter_id === user.id)
+        const approveCount = deleteRequest.votes.filter(v => v.vote === 'approve').length
+
+        const handleVote = async (vote: 'approve' | 'reject') => {
+          setVotingDelete(true)
+          const res = await projectsApi.voteDelete(project.id, vote)
+          if (res.success) {
+            if ((res.data as any).deleted) {
+              toast.success('Project deleted — all collaborators approved.')
+            } else if (res.data.status === 'rejected') {
+              toast.success('You rejected the deletion request.')
+              setDeleteRequest(null)
+            } else {
+              toast.success(vote === 'approve' ? 'Vote recorded — waiting for others.' : 'Deletion rejected.')
+              const updated = await projectsApi.getDeleteRequest(project.id)
+              if (updated.success) setDeleteRequest(updated.data)
+            }
+          } else {
+            toast.error(res.error || 'Vote failed.')
+          }
+          setVotingDelete(false)
+        }
+
+        return (
+          <div className="rounded-2xl border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-900/10 p-5 mb-8">
+            <div className="flex items-start gap-3 mb-3">
+              <WarningCircle size={18} className="text-amber-600 flex-shrink-0 mt-0.5" />
+              <div>
+                <p className="text-[13px] font-semibold text-amber-800 dark:text-amber-300" style={{ fontFamily: 'var(--font-display)' }}>
+                  Deletion Requested
+                </p>
+                <p className="text-[12px] text-amber-700 dark:text-amber-400 mt-0.5" style={{ fontFamily: 'var(--font-body)' }}>
+                  {approveCount} of {deleteRequest.required_approvals} approvals received
+                  {deleteRequest.reason ? ` · "${deleteRequest.reason}"` : ''}
+                </p>
+              </div>
+            </div>
+            {myVote ? (
+              <p className="text-[12px] text-amber-700 dark:text-amber-400" style={{ fontFamily: 'var(--font-body)' }}>
+                You voted: <strong>{myVote.vote === 'approve' ? '✓ Approve' : '✗ Reject'}</strong>
+              </p>
+            ) : (
+              <div className="flex gap-2">
+                <button
+                  onClick={() => void handleVote('approve')}
+                  disabled={votingDelete}
+                  className="flex items-center gap-1.5 px-4 py-2 rounded-full text-[13px] text-white bg-red-500 hover:bg-red-600 disabled:opacity-50 transition-colors"
+                  style={{ fontFamily: 'var(--font-body)', fontWeight: 500 }}
+                >
+                  <CheckCircle size={14} /> Approve Deletion
+                </button>
+                <button
+                  onClick={() => void handleVote('reject')}
+                  disabled={votingDelete}
+                  className="flex items-center gap-1.5 px-4 py-2 rounded-full text-[13px] border border-[#E4E7EC] dark:border-[#222229] text-[#5C6070] hover:border-[#0066FF] hover:text-[#0066FF] disabled:opacity-50 transition-colors"
+                  style={{ fontFamily: 'var(--font-body)', fontWeight: 500 }}
+                >
+                  <XCircle size={14} /> Keep Project
+                </button>
+              </div>
+            )}
+          </div>
+        )
+      })()}
 
       {/* 6d. Version History */}
       {canSeePlagiarism && (

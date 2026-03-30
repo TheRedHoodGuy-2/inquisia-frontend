@@ -10,7 +10,7 @@ import {
 import { motion, AnimatePresence } from 'motion/react'
 import { useSession } from '../../context/SessionContext'
 import { projectsApi, supervisorApi, aiApi } from '../../lib/api'
-import type { Project, ProjectVersion, ProjectAuthor, ChangeRequest } from '../../lib/types'
+import type { Project, ProjectVersion, ProjectAuthor, ChangeRequest, DeleteRequest } from '../../lib/types'
 import { getCategoryStyle, relativeTime, formatNumber, getAvatarColor, getInitials } from '../../lib/utils'
 import { useTheme } from '../../context/ThemeContext'
 import { SkeletonDashboardCard } from '../components/SkeletonPrimitives'
@@ -81,6 +81,10 @@ function StudentProjectCard({ project: initialProject, onDelete }: { project: Pr
   const [loadingVersions, setLoadingVersions] = useState(false)
   const [revisionModal, setRevisionModal] = useState<'revision' | 'resubmit' | null>(null)
   const [changeModal, setChangeModal] = useState(false)
+  const [deleteRequest, setDeleteRequest] = useState<DeleteRequest | null | undefined>(undefined) // undefined = not fetched
+  const [showDeleteModal, setShowDeleteModal] = useState(false)
+  const [deleteReason, setDeleteReason] = useState('')
+  const [deletingRequest, setDeletingRequest] = useState(false)
 
   const statusColors = STATUS_COLORS[project.status] ?? STATUS_COLORS.pending
 
@@ -174,24 +178,110 @@ function StudentProjectCard({ project: initialProject, onDelete }: { project: Pr
               ) : null}
 
               <div className="flex flex-wrap gap-2 mt-4">
-                {project.status === 'pending' && (
-                  <button onClick={() => {
-                    if (window.confirm("Are you sure you want to permanently delete this pending submission?")) {
-                      projectsApi.delete(project.id).then((res) => {
-                        if (res.success) {
-                          onDelete?.();
-                          toast.success("Submission deleted successfully");
-                        } else {
-                          toast.error(res.error || 'Failed to delete submission');
+                {project.status === 'pending' && (() => {
+                  // Determine if 3+ authors (uploader + 2+ co-authors)
+                  const authorCount = (project as any).authors?.length ?? 1
+                  const isCollaborative = authorCount >= 3
+
+                  if (!isCollaborative) {
+                    return (
+                      <button onClick={() => {
+                        if (window.confirm("Are you sure you want to permanently delete this pending submission?")) {
+                          projectsApi.delete(project.id).then((res) => {
+                            if (res.success) { onDelete?.(); toast.success("Submission deleted.") }
+                            else toast.error(res.error || 'Failed to delete submission')
+                          })
                         }
-                      })
+                      }}
+                        className="px-4 py-2 rounded-full text-[13px] border border-red-500/20 text-red-500 hover:bg-red-500 hover:text-white transition-colors"
+                        style={{ fontFamily: 'var(--font-body)', fontWeight: 500 }}>
+                        Delete Submission
+                      </button>
+                    )
+                  }
+
+                  // Collaborative delete flow
+                  const hasPendingRequest = deleteRequest?.status === 'pending'
+
+                  const handleOpenDeleteModal = async () => {
+                    if (deleteRequest === undefined) {
+                      const res = await projectsApi.getDeleteRequest(project.id)
+                      setDeleteRequest(res.success ? res.data : null)
                     }
-                  }}
-                    className="px-4 py-2 rounded-full text-[13px] border border-red-500/20 text-red-500 hover:bg-red-500 hover:text-white transition-colors"
-                    style={{ fontFamily: 'var(--font-body)', fontWeight: 500 }}>
-                    Delete Submission
-                  </button>
-                )}
+                    setShowDeleteModal(true)
+                  }
+
+                  const handleRequestDelete = async () => {
+                    setDeletingRequest(true)
+                    const res = await projectsApi.requestDelete(project.id, deleteReason)
+                    if (res.success) {
+                      setDeleteRequest(res.data)
+                      toast.success("Deletion request sent to all collaborators and supervisor.")
+                      setShowDeleteModal(false)
+                    } else {
+                      toast.error(res.error || 'Failed to create deletion request.')
+                    }
+                    setDeletingRequest(false)
+                  }
+
+                  const handleCancelRequest = async () => {
+                    const res = await projectsApi.cancelDeleteRequest(project.id)
+                    if (res.success) { setDeleteRequest(null); toast.success("Deletion request cancelled.") }
+                    else toast.error(res.error || 'Failed to cancel.')
+                  }
+
+                  return (
+                    <>
+                      {hasPendingRequest ? (
+                        <div className="flex items-center gap-2">
+                          <span className="px-3 py-1.5 rounded-full text-[12px] bg-amber-50 dark:bg-amber-900/10 border border-amber-200 dark:border-amber-800 text-amber-700 dark:text-amber-400" style={{ fontFamily: 'var(--font-body)' }}>
+                            Deletion pending ({deleteRequest!.votes.filter(v => v.vote === 'approve').length}/{deleteRequest!.required_approvals} approvals)
+                          </span>
+                          <button onClick={() => void handleCancelRequest()}
+                            className="px-3 py-1.5 rounded-full text-[12px] border border-[#E4E7EC] dark:border-[#222229] text-[#9CA3AF] hover:text-red-500 hover:border-red-300 transition-colors"
+                            style={{ fontFamily: 'var(--font-body)' }}>Cancel</button>
+                        </div>
+                      ) : (
+                        <button onClick={() => void handleOpenDeleteModal()}
+                          className="px-4 py-2 rounded-full text-[13px] border border-red-500/20 text-red-500 hover:bg-red-500 hover:text-white transition-colors"
+                          style={{ fontFamily: 'var(--font-body)', fontWeight: 500 }}>
+                          Request Deletion
+                        </button>
+                      )}
+
+                      {/* Delete request modal */}
+                      {showDeleteModal && (
+                        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+                          <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setShowDeleteModal(false)} />
+                          <div className="relative w-full max-w-[420px] bg-white dark:bg-[#111115] rounded-2xl border border-[#E4E7EC] dark:border-[#222229] p-6 shadow-xl">
+                            <h3 className="text-[16px] font-semibold text-[#0A0A0F] dark:text-[#F5F5F5] mb-1" style={{ fontFamily: 'var(--font-display)' }}>Request Deletion</h3>
+                            <p className="text-[13px] text-[#9CA3AF] mb-4" style={{ fontFamily: 'var(--font-body)' }}>
+                              This project has {authorCount} authors. All co-authors and the supervisor must approve before the project is deleted.
+                            </p>
+                            <textarea
+                              value={deleteReason}
+                              onChange={e => setDeleteReason(e.target.value)}
+                              placeholder="Reason for deletion (optional)"
+                              rows={3}
+                              className="w-full rounded-xl border border-[#E4E7EC] dark:border-[#222229] bg-transparent px-3 py-2.5 text-[13px] text-[#0A0A0F] dark:text-[#F5F5F5] placeholder-[#9CA3AF] outline-none resize-none focus:border-[#0066FF] transition-all mb-4"
+                              style={{ fontFamily: 'var(--font-body)' }}
+                            />
+                            <div className="flex justify-end gap-2">
+                              <button onClick={() => setShowDeleteModal(false)}
+                                className="px-4 py-2 rounded-full text-[13px] border border-[#E4E7EC] dark:border-[#222229] text-[#5C6070]"
+                                style={{ fontFamily: 'var(--font-body)' }}>Cancel</button>
+                              <button onClick={() => void handleRequestDelete()} disabled={deletingRequest}
+                                className="px-4 py-2 rounded-full text-[13px] text-white bg-red-500 hover:bg-red-600 disabled:opacity-50 transition-colors"
+                                style={{ fontFamily: 'var(--font-body)', fontWeight: 500 }}>
+                                {deletingRequest ? 'Sending...' : 'Send Request'}
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </>
+                  )
+                })()}
                 {project.status === 'changes_requested' && (
                   <button onClick={() => setRevisionModal('revision')}
                     className="px-4 py-2 rounded-full text-[13px] text-white bg-[#0066FF] hover:bg-[#0052CC] transition-colors"

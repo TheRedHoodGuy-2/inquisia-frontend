@@ -87,9 +87,12 @@ export interface Project {
   authors: ProjectAuthor[]
   ai_summary: string | null
   ai_analysis: AIAnalysis | null
+  uploaded_by: string | null
   is_special: boolean
   special_assigned_at: string | null
   is_downloadable: boolean
+  ai_writing_score: number | null
+  ai_writing_checked_at: string | null
   created_at: string
   updated_at: string
   approved_at: string | null
@@ -181,6 +184,27 @@ export interface Supervisor {
   display_name: string | null
   degrees: string | null
   departments: string[]
+}
+
+// ─── Delete Request ───────────────────────────────────────────────────────────
+
+export interface DeleteVote {
+  voter_id: string
+  voter_role: 'co_author' | 'supervisor'
+  vote: 'approve' | 'reject'
+  voted_at: string
+}
+
+export interface DeleteRequest {
+  id: string
+  project_id: string
+  requested_by: string
+  reason: string | null
+  status: 'pending' | 'approved' | 'rejected' | 'cancelled'
+  required_approvals: number
+  created_at: string
+  updated_at: string
+  votes: DeleteVote[]
 }
 
 // ─── Change Request ───────────────────────────────────────────────────────────

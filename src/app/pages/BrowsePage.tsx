@@ -74,7 +74,7 @@ function ProjectCard({ project, index }: { project: Project; index: number }) {
       {/* Gold top bar for special projects */}
       {project.is_special && (
         <div
-          className="h-[3px] w-full flex-shrink-0"
+          className="h-px w-full flex-shrink-0"
           style={{ background: 'linear-gradient(90deg, #B8860B, #F5D060, #D4AF37, #F5D060, #B8860B)', backgroundSize: '200% 100%', animation: 'goldShimmer 3s ease-in-out infinite' }}
         />
       )}
