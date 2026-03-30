@@ -374,7 +374,7 @@ export function UploadPage() {
       metadata.presentation_type = 'file'
     }
 
-    const res = await projectsApi.create(pdfFile, metadata, presentationMode === 'file' ? presentationFile : null)
+    const res = await projectsApi.create(pdfFile, metadata, presentationMode === 'file' ? presentationFile : null, extractedPdfText || undefined)
     if (res.success) {
       confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } })
       toast.success('Project submitted! Your supervisor will be notified to review it.')

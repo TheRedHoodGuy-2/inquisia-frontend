@@ -199,17 +199,59 @@ export const projectsApi = {
   get: (id: string) => apiFetch<Project>(`/api/projects/${id}/public`),
   myProjects: () => apiFetch<Project[]>('/api/projects'),
   /**
-   * Create a new project submission.
-   * Backend expects multipart/form-data with exactly two keys:
-   *   - `file`     — the PDF blob
-   *   - `metadata` — JSON-stringified { title, abstract, supervisor_id, github_url, live_url, co_authors, student_tags }
+   * Get a signed upload URL for direct-to-Supabase file upload (bypasses Vercel body limit).
    */
-  create: (file: File, metadata: Record<string, unknown>, presentationFile?: File | null) => {
-    const fd = new FormData()
-    fd.append('file', file)
-    fd.append('metadata', JSON.stringify(metadata))
-    if (presentationFile) fd.append('presentation', presentationFile)
-    return apiFetch<Project>('/api/projects', { method: 'POST', body: fd })
+  getUploadUrl: (bucket: string, filename: string, contentType: string, size: number) =>
+    apiFetch<{ signedUrl: string; path: string; token: string }>('/api/storage/upload-url', {
+      method: 'POST',
+      body: JSON.stringify({ bucket, filename, contentType, size }),
+    }),
+
+  /**
+   * Upload a file directly to Supabase Storage using a signed URL.
+   * Returns the storage path.
+   */
+  uploadDirect: async (file: File, bucket: string): Promise<string> => {
+    const res = await projectsApi.getUploadUrl(bucket, file.name, file.type, file.size)
+    if (!res.success) throw new Error((res as any).error || 'Failed to get upload URL')
+    const { signedUrl, path } = res.data
+    const uploadRes = await fetch(signedUrl, {
+      method: 'PUT',
+      body: file,
+      headers: { 'Content-Type': file.type },
+    })
+    if (!uploadRes.ok) throw new Error(`Upload failed: ${uploadRes.status} ${uploadRes.statusText}`)
+    return path
+  },
+
+  /**
+   * Create a new project submission.
+   * Uses direct-to-Supabase upload to avoid Vercel's 4.5MB body limit.
+   */
+  create: async (file: File, metadata: Record<string, unknown>, presentationFile?: File | null, pdfText?: string): Promise<ApiResponse<Project>> => {
+    // Upload PDF directly to Supabase Storage
+    let reportPath: string
+    try {
+      reportPath = await projectsApi.uploadDirect(file, 'projects')
+    } catch (err: any) {
+      return { success: false, error: err.message || 'PDF upload failed' }
+    }
+
+    // Upload presentation directly if provided
+    let presentationPath: string | null = null
+    if (presentationFile && metadata.presentation_type === 'file') {
+      try {
+        presentationPath = await projectsApi.uploadDirect(presentationFile, 'presentations')
+      } catch {
+        // Non-fatal: continue without presentation
+        metadata = { ...metadata, presentation_type: null }
+      }
+    }
+
+    return apiFetch<Project>('/api/projects', {
+      method: 'POST',
+      body: JSON.stringify({ metadata, reportPath, pdfText: pdfText ?? '', presentationPath }),
+    })
   },
   /**
    * Edit a pending project (PATCH /api/projects/:id).
