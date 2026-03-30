@@ -1,7 +1,7 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react'
 import { useParams, Link } from 'react-router'
 import {
-  DownloadSimple, CalendarBlank, GithubLogo, ArrowSquareOut,
+  DownloadSimple, CalendarBlank, GithubLogo, ArrowSquareOut, Presentation,
   Copy, Check, ChatCircle, Robot, PaperPlaneTilt,
   WarningCircle, CaretDown, CaretUp, X, CircleNotch, ArrowBendUpLeft,
   CheckCircle, XCircle, GitDiff, DotsThreeVertical, PencilSimple, Trash, BookmarkSimple,
@@ -1520,7 +1520,28 @@ export function ProjectDetailPage() {
         </div>
       )}
 
-      {/* 11. Download */}
+      {/* 11. Presentation (students only) */}
+      {project.presentation_url && (
+        <div className="py-6 border-b border-[#E4E7EC] dark:border-[#222229]">
+          <div className="flex items-center justify-between mb-3">
+            <h2 style={{ fontFamily: 'var(--font-display)', fontWeight: 600, fontSize: '18px' }} className="text-[#0A0A0F] dark:text-[#F5F5F5]">
+              Presentation Deck
+            </h2>
+          </div>
+          <a
+            href={project.presentation_url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full text-[14px] text-white bg-[#0066FF] hover:bg-[#0052CC] transition-colors"
+            style={{ fontFamily: 'var(--font-body)', fontWeight: 500 }}
+          >
+            <Presentation size={16} />
+            {project.presentation_type === 'file' ? 'Download Presentation' : 'View Presentation'}
+          </a>
+        </div>
+      )}
+
+      {/* 12. Download */}
       <div className="py-6 border-b border-[#E4E7EC] dark:border-[#222229]">
         <div className="flex items-center justify-between mb-3">
           <h2 style={{ fontFamily: 'var(--font-display)', fontWeight: 600, fontSize: '18px' }} className="text-[#0A0A0F] dark:text-[#F5F5F5]">
@@ -1545,7 +1566,7 @@ export function ProjectDetailPage() {
         )}
       </div>
 
-      {/* 12. Divider */}
+      {/* 13. Divider */}
       <div className="h-px bg-[#E4E7EC] dark:bg-[#222229] mt-8 mb-0" />
 
       {/* 13. Project chat */}

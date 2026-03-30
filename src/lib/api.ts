@@ -203,20 +203,22 @@ export const projectsApi = {
    *   - `file`     — the PDF blob
    *   - `metadata` — JSON-stringified { title, abstract, supervisor_id, github_url, live_url, co_authors, student_tags }
    */
-  create: (file: File, metadata: Record<string, unknown>) => {
+  create: (file: File, metadata: Record<string, unknown>, presentationFile?: File | null) => {
     const fd = new FormData()
     fd.append('file', file)
     fd.append('metadata', JSON.stringify(metadata))
+    if (presentationFile) fd.append('presentation', presentationFile)
     return apiFetch<Project>('/api/projects', { method: 'POST', body: fd })
   },
   /**
    * Edit a pending project (PATCH /api/projects/:id).
    * Backend expects multipart/form-data with the same `file` + `metadata` shape.
    */
-  update: (id: string, file: File | null, metadata: Record<string, unknown>) => {
+  update: (id: string, file: File | null, metadata: Record<string, unknown>, presentationFile?: File | null) => {
     const fd = new FormData()
     if (file) fd.append('file', file)
     fd.append('metadata', JSON.stringify(metadata))
+    if (presentationFile) fd.append('presentation', presentationFile)
     return apiFetch<Project>(`/api/projects/${id}`, { method: 'PATCH', body: fd })
   },
   delete: (id: string) => apiFetch<null>(`/api/projects/${id}`, { method: 'DELETE' }),
@@ -237,10 +239,11 @@ export const projectsApi = {
    * Submit a revision (POST /api/projects/:id/revision).
    * Backend expects: `file` (PDF) + `metadata` JSON string containing { notes }.
    */
-  submitRevision: (projectId: string, file: File, notes: string) => {
+  submitRevision: (projectId: string, file: File, notes: string, presentationFile?: File | null, presentationMeta?: { presentation_url?: string; presentation_type?: string }) => {
     const fd = new FormData()
     fd.append('file', file)
-    fd.append('metadata', JSON.stringify({ notes }))
+    fd.append('metadata', JSON.stringify({ notes, ...presentationMeta }))
+    if (presentationFile) fd.append('presentation', presentationFile)
     return apiFetch<Project>(`/api/projects/${projectId}/revision`, { method: 'POST', body: fd })
   },
   /**
@@ -249,10 +252,11 @@ export const projectsApi = {
    */
   setDisplayVersion: (projectId: string, versionNumber: number) =>
     apiFetch<null>(`/api/projects/${projectId}/versions`, { method: 'POST', body: JSON.stringify({ version_number: versionNumber }) }),
-  resubmit: (projectId: string, file: File, payload: { notes?: string; title?: string; abstract?: string; co_authors?: string[] }) => {
+  resubmit: (projectId: string, file: File, payload: { notes?: string; title?: string; abstract?: string; co_authors?: string[]; presentation_url?: string; presentation_type?: string }, presentationFile?: File | null) => {
     const fd = new FormData()
     fd.append('file', file)
     fd.append('metadata', JSON.stringify(payload))
+    if (presentationFile) fd.append('presentation', presentationFile)
     return apiFetch<Project>(`/api/projects/${projectId}/resubmit`, { method: 'POST', body: fd })
   },
   /**

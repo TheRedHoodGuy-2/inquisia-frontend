@@ -77,6 +77,8 @@ export interface Project {
   similarity_reason?: string | null
   github_url: string | null
   live_url: string | null
+  presentation_url: string | null
+  presentation_type: 'file' | 'link' | null
   report_url: string | null
   download_count: number
   supervisor_id: string | null

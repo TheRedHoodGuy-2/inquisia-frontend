@@ -1,6 +1,6 @@
 import React, { useState, useCallback, useEffect } from 'react'
 import { useNavigate } from 'react-router'
-import { UploadSimple, FilePdf, X, Check, Spinner, CheckCircle, WarningCircle, MagnifyingGlass } from 'phosphor-react'
+import { UploadSimple, FilePdf, X, Check, Spinner, CheckCircle, WarningCircle, MagnifyingGlass, Presentation, Link } from 'phosphor-react'
 import { motion, AnimatePresence } from 'motion/react'
 import { useSession } from '../../context/SessionContext'
 import { publicApi, projectsApi, usersApi, aiApi } from '../../lib/api'
@@ -207,6 +207,9 @@ export function UploadPage() {
   const [isExtracting, setIsExtracting] = useState(false)
   const [githubUrl, setGithubUrl] = useState('')
   const [liveUrl, setLiveUrl] = useState('')
+  const [presentationMode, setPresentationMode] = useState<'none' | 'file' | 'link'>('none')
+  const [presentationFile, setPresentationFile] = useState<File | null>(null)
+  const [presentationUrl, setPresentationUrl] = useState('')
 
   // Step 2
   const [title, setTitle] = useState('')
@@ -364,8 +367,14 @@ export function UploadPage() {
     }
     if (githubUrl) metadata.github_url = githubUrl
     if (liveUrl) metadata.live_url = liveUrl
+    if (presentationMode === 'link' && presentationUrl) {
+      metadata.presentation_url = presentationUrl
+      metadata.presentation_type = 'link'
+    } else if (presentationMode === 'file' && presentationFile) {
+      metadata.presentation_type = 'file'
+    }
 
-    const res = await projectsApi.create(pdfFile, metadata)
+    const res = await projectsApi.create(pdfFile, metadata, presentationMode === 'file' ? presentationFile : null)
     if (res.success) {
       confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } })
       toast.success('Project submitted! Your supervisor will be notified to review it.')
@@ -439,6 +448,65 @@ export function UploadPage() {
                       <p className="mt-1.5 ml-4 text-[12px] text-red-500" style={{ fontFamily: 'var(--font-body)' }}>
                         {validateProjectUrl(liveUrl).reason}
                       </p>
+                    )}
+                  </div>
+
+                  {/* Presentation (optional, student-only visibility) */}
+                  <div className="rounded-2xl border border-[#E4E7EC] dark:border-[#222229] p-4 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <Presentation size={16} className="text-[#9CA3AF]" />
+                        <span className="text-[13px] text-[#5C6070] dark:text-[#8B8FA8]" style={{ fontFamily: 'var(--font-body)', fontWeight: 500 }}>
+                          Presentation Deck <span className="text-[11px] text-[#9CA3AF] font-normal">(optional · visible to students only)</span>
+                        </span>
+                      </div>
+                      {presentationMode !== 'none' && (
+                        <button onClick={() => { setPresentationMode('none'); setPresentationFile(null); setPresentationUrl('') }}
+                          className="p-1 rounded-full hover:bg-[#F2F4F7] dark:hover:bg-[#18181D]">
+                          <X size={13} className="text-[#9CA3AF]" />
+                        </button>
+                      )}
+                    </div>
+
+                    {presentationMode === 'none' && (
+                      <div className="flex gap-2">
+                        <button onClick={() => setPresentationMode('file')}
+                          className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-full border border-[#E4E7EC] dark:border-[#222229] text-[12px] text-[#5C6070] hover:border-[#0066FF] hover:text-[#0066FF] transition-colors"
+                          style={{ fontFamily: 'var(--font-body)' }}>
+                          <UploadSimple size={14} /> Upload .pptx / .ppt
+                        </button>
+                        <button onClick={() => setPresentationMode('link')}
+                          className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-full border border-[#E4E7EC] dark:border-[#222229] text-[12px] text-[#5C6070] hover:border-[#0066FF] hover:text-[#0066FF] transition-colors"
+                          style={{ fontFamily: 'var(--font-body)' }}>
+                          <Link size={14} /> Paste a link
+                        </button>
+                      </div>
+                    )}
+
+                    {presentationMode === 'file' && (
+                      presentationFile ? (
+                        <div className="rounded-xl border border-[#0066FF] bg-[#0066FF08] p-3 flex items-center gap-3">
+                          <Presentation size={20} className="text-[#0066FF] flex-shrink-0" />
+                          <div className="flex-1 min-w-0">
+                            <p className="text-[13px] font-medium text-[#0A0A0F] dark:text-[#F5F5F5] truncate" style={{ fontFamily: 'var(--font-body)' }}>{presentationFile.name}</p>
+                            <p className="text-[11px] text-[#9CA3AF]">{(presentationFile.size / 1024 / 1024).toFixed(1)} MB</p>
+                          </div>
+                          <button onClick={() => setPresentationFile(null)} className="p-1 rounded-full hover:bg-[#F2F4F7] dark:hover:bg-[#18181D]">
+                            <X size={13} className="text-[#9CA3AF]" />
+                          </button>
+                        </div>
+                      ) : (
+                        <label className="flex flex-col items-center justify-center gap-2 py-6 rounded-xl border-2 border-dashed border-[#E4E7EC] dark:border-[#222229] cursor-pointer hover:border-[#0066FF] hover:bg-[#0066FF08] transition-all">
+                          <UploadSimple size={22} className="text-[#9CA3AF]" />
+                          <span className="text-[12px] text-[#9CA3AF]" style={{ fontFamily: 'var(--font-body)' }}>.pptx or .ppt · max 50MB</span>
+                          <input type="file" accept=".pptx,.ppt,application/vnd.ms-powerpoint,application/vnd.openxmlformats-officedocument.presentationml.presentation"
+                            className="hidden" onChange={(e) => setPresentationFile(e.target.files?.[0] ?? null)} />
+                        </label>
+                      )
+                    )}
+
+                    {presentationMode === 'link' && (
+                      <FloatingLabel id="presentationUrl" label="Presentation URL (Google Slides, etc.)" value={presentationUrl} onChange={setPresentationUrl} type="url" />
                     )}
                   </div>
                 </div>
@@ -615,6 +683,10 @@ export function UploadPage() {
                     { label: 'Team', value: `${1 + teammates.length} member${teammates.length > 0 ? 's' : ''}` },
                     { label: 'Supervisor', value: supervisors.find((s) => s.id === selectedSupervisor)?.full_name ?? '—' },
                     { label: 'Tags', value: tags.join(', ') || '—' },
+                    {
+                      label: 'Presentation',
+                      value: presentationMode === 'file' ? (presentationFile?.name ?? '—') : presentationMode === 'link' ? (presentationUrl || '—') : 'None'
+                    },
                   ].map(({ label, value }) => (
                     <div key={label} className="flex gap-3 rounded-2xl bg-[#F7F8FA] dark:bg-[#18181D] p-4">
                       <p className="text-[12px] text-[#9CA3AF] w-24 flex-shrink-0" style={{ fontFamily: 'var(--font-body)' }}>{label}</p>
